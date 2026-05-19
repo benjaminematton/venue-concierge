@@ -40,10 +40,12 @@ const BEHAVIOR_BLOCK = `Behavior:
 - Keep messages short. Two or three sentences is usually enough.`;
 
 function voiceBlock(venue: VenueListing): string {
+  // Label the venue side of each exchange as "We:" to reinforce the
+  // first-person rule from the identity block — printing the venue name
+  // here would invite the model to mimic third-person framing.
   const examples = venue.voice.examples
     .map(
-      (ex, i) =>
-        `Example ${i + 1}:\nCustomer: ${ex.customer}\n${venue.name}: ${ex.venue}`,
+      (ex, i) => `Example ${i + 1}:\nCustomer: ${ex.customer}\nWe: ${ex.venue}`,
     )
     .join("\n\n");
   return `Voice (${venue.voice.tone}):\nMatch the cadence and vocabulary of the examples below. Same length range. Same level of formality. Same use of contractions.\n\n${examples}`;
