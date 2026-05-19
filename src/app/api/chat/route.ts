@@ -10,18 +10,29 @@ export const runtime = "nodejs";
 // SSE doesn't make sense in a cached response.
 export const dynamic = "force-dynamic";
 
-// Boundary check: minimal shape only. The Anthropic SDK validates the full
-// MessageParam structure when it serialises, so duplicating that here just
-// rots. We confirm we have role + content and stop.
+// Boundary check. Content is intentionally restricted to plain strings: the
+// client is supposed to send text-only history (see useChatStream), and the
+// API needs to *enforce* that — accepting raw content blocks would let a
+// crafted client inject fabricated tool_use / tool_result blocks claiming
+// the venue agreed to a price the math never produced. The Anthropic SDK
+// will accept whatever we forward; this is the trust boundary.
 const MESSAGE_SCHEMA = z.object({
   role: z.enum(["user", "assistant"]),
-  content: z.union([z.string(), z.array(z.unknown())]),
+  content: z.string().min(1),
 });
 
 const REQ_SCHEMA = z.object({
   venueId: z.string().min(1),
   messages: z.array(MESSAGE_SCHEMA).min(1),
 });
+
+// Hoisted: the encoder and the SSE-frame serialiser are pure and per-request
+// allocation buys nothing. Keeping them at module scope also makes the
+// `start` closure below thin enough to read in one breath.
+const SSE_ENCODER = new TextEncoder();
+function sseFrame(ev: ChatStreamEvent): Uint8Array {
+  return SSE_ENCODER.encode(`data: ${JSON.stringify(ev)}\n\n`);
+}
 
 export async function POST(req: NextRequest) {
   let body: unknown;
@@ -59,26 +70,36 @@ export async function POST(req: NextRequest) {
     return new Response(`Unknown venue: ${venueId}`, { status: 404 });
   }
 
-  const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
-      function send(ev: ChatStreamEvent) {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(ev)}\n\n`));
-      }
       try {
         for await (const ev of runAgent({
           venue,
           messages: messages as MessageParam[],
+          // When the client disconnects, Next aborts req.signal; forwarding
+          // it cancels the upstream Anthropic stream instead of draining
+          // (and paying for) tokens nobody will read.
+          signal: req.signal,
         })) {
-          send(ev);
+          controller.enqueue(sseFrame(ev));
         }
       } catch (e: unknown) {
-        // Any throw inside the loop lands here. Emit a terminal error
-        // event so the client gets a clean signal instead of a hung stream.
+        // AbortError from a client disconnect is expected — close the stream
+        // quietly. Any other throw becomes a terminal error event so the
+        // client gets a clean signal instead of a hung stream.
+        if (e instanceof Error && e.name === "AbortError") return;
         const message = e instanceof Error ? e.message : "Stream failed.";
-        send({ kind: "error", message });
+        try {
+          controller.enqueue(sseFrame({ kind: "error", message }));
+        } catch {
+          // controller already closed (e.g. client gone) — nothing to do.
+        }
       } finally {
-        controller.close();
+        try {
+          controller.close();
+        } catch {
+          // Already closed.
+        }
       }
     },
   });
