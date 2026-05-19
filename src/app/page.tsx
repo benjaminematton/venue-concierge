@@ -5,6 +5,7 @@ import { AlertTriangle } from "lucide-react";
 import { ChatPanel } from "@/components/ChatPanel";
 import { QuotePanel } from "@/components/QuotePanel";
 import { useChatStream } from "@/lib/useChatStream";
+import { suggestedPromptsFor } from "@/lib/suggestedPrompts";
 import { VENUES, listVenueSummaries } from "@/lib/venues";
 
 const VENUE_SUMMARIES = listVenueSummaries();
@@ -47,6 +48,7 @@ export default function Home() {
           venueName={venue.name}
           onSubmit={send}
           isStreaming={isStreaming}
+          suggestedPrompts={suggestedPromptsFor(venue.id)}
         />
         <aside>
           <QuotePanel

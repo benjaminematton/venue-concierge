@@ -12,6 +12,7 @@ interface ChatPanelProps {
   onSubmit: (text: string) => void;
   isStreaming?: boolean;
   disabled?: boolean;
+  suggestedPrompts?: string[];
 }
 
 // Pixel cap matches `max-h-32` (8rem). Kept in sync with the textarea class
@@ -26,6 +27,7 @@ export function ChatPanel({
   onSubmit,
   isStreaming = false,
   disabled = false,
+  suggestedPrompts = [],
 }: ChatPanelProps) {
   const [input, setInput] = useState("");
   const listRef = useRef<HTMLDivElement>(null);
@@ -95,9 +97,30 @@ export function ChatPanel({
         className="flex-1 space-y-4 overflow-y-auto px-5 py-5"
       >
         {messages.length === 0 ? (
-          <div className="grid h-full place-items-center text-center text-sm text-zinc-500 dark:text-zinc-400">
-            Say hi to {venueName}. Tell them what kind of event you&apos;re
-            planning.
+          <div className="flex h-full flex-col items-center justify-center gap-5 px-4 text-center">
+            <p className="max-w-sm text-sm text-zinc-500 dark:text-zinc-400">
+              Say hi to {venueName}. Tell them what kind of event you&apos;re
+              planning.
+            </p>
+            {suggestedPrompts.length > 0 && (
+              <ul className="flex w-full max-w-md flex-col gap-2">
+                {suggestedPrompts.map((p) => (
+                  <li key={p}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        stickToBottomRef.current = true;
+                        onSubmit(p);
+                      }}
+                      disabled={isStreaming || disabled}
+                      className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-left text-sm text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
+                    >
+                      {p}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         ) : (
           messages.map((m) => (
