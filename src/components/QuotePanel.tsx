@@ -4,16 +4,15 @@ import { Calculator } from "lucide-react";
 import { PriceBreakdown } from "./PriceBreakdown";
 import { VenueSwitcher } from "./VenueSwitcher";
 import type { PriceBreakdown as PriceBreakdownData } from "@/lib/pricing/venuePricing";
-import type { VenueListing } from "@/lib/pricing/types";
-import type { VenueSummary } from "@/lib/venues";
+import type { PublicVenueListing, VenueSummary } from "@/lib/pricing/types";
 
 interface QuotePanelProps {
-  venue: VenueListing;
+  venue: PublicVenueListing;
   venues: VenueSummary[];
   breakdown: PriceBreakdownData | null;
   selectedPackageId: string | null;
-  date?: string;
-  guests?: number;
+  date: string | null;
+  guests: number | null;
   onSwitchVenue: (id: string) => void;
 }
 
@@ -29,6 +28,7 @@ export function QuotePanel({
   const pkg = selectedPackageId
     ? venue.packages.find((p) => p.id === selectedPackageId)
     : null;
+  const ready = breakdown && pkg && date && guests !== null;
 
   return (
     <div className="flex h-full flex-col gap-4">
@@ -38,7 +38,7 @@ export function QuotePanel({
         onChange={onSwitchVenue}
       />
 
-      {breakdown && pkg ? (
+      {ready ? (
         <PriceBreakdown
           breakdown={breakdown}
           packageLabel={pkg.label}
@@ -66,20 +66,6 @@ function QuoteSkeleton({ venueName }: { venueName: string }) {
         Tell {venueName} about your event in the chat. Once we have the date,
         guest count, and a package, the breakdown shows up here.
       </p>
-      <ul className="mt-5 space-y-2 text-xs text-zinc-400 dark:text-zinc-600">
-        <li className="flex items-baseline justify-between">
-          <span>Subtotal</span>
-          <span className="font-mono tabular-nums">—</span>
-        </li>
-        <li className="flex items-baseline justify-between">
-          <span>Due at booking</span>
-          <span className="font-mono tabular-nums">—</span>
-        </li>
-        <li className="flex items-baseline justify-between">
-          <span>Estimated total</span>
-          <span className="font-mono tabular-nums">—</span>
-        </li>
-      </ul>
     </div>
   );
 }

@@ -9,14 +9,28 @@ interface PriceBreakdownProps {
   breakdown: PriceBreakdownData;
   packageLabel: string;
   venueName: string;
-  date?: string;
-  guests?: number;
+  // ISO date (YYYY-MM-DD) in the venue's local calendar.
+  date: string;
+  guests: number;
 }
 
 function feeLabel(line: ResolvedFeeLine): string {
   if (line.basis === "FixedAmount") return line.label;
   if (line.rate === 0) return line.label;
   return `${line.label} (${formatRatePct(line.rate)})`;
+}
+
+const DATE_FORMAT = new Intl.DateTimeFormat("en-US", { dateStyle: "medium" });
+
+// Parse YYYY-MM-DD as a local calendar date — `new Date("2026-06-15")` is
+// UTC midnight, which would shift a day in negative-offset zones.
+function formatLocalDate(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  return DATE_FORMAT.format(new Date(y, m - 1, d));
+}
+
+function feeKey(line: ResolvedFeeLine, i: number): string {
+  return `${line.appliesAt}-${i}-${line.label}`;
 }
 
 export function PriceBreakdown({
@@ -47,11 +61,9 @@ export function PriceBreakdown({
           <div className="font-medium text-zinc-700 dark:text-zinc-300">
             {venueName}
           </div>
-          {date && guests !== undefined && (
-            <div className="mt-0.5 tabular-nums">
-              {date} · {guests} {guests === 1 ? "guest" : "guests"}
-            </div>
-          )}
+          <div className="mt-0.5 tabular-nums">
+            {formatLocalDate(date)} · {guests} {guests === 1 ? "guest" : "guests"}
+          </div>
         </div>
       </header>
 
@@ -65,8 +77,8 @@ export function PriceBreakdown({
           </dd>
         </div>
 
-        {bookingFees.map((line) => (
-          <div key={line.label} className="flex items-baseline justify-between">
+        {bookingFees.map((line, i) => (
+          <div key={feeKey(line, i)} className="flex items-baseline justify-between">
             <dt className="text-zinc-600 dark:text-zinc-400">{feeLabel(line)}</dt>
             <dd className="font-mono tabular-nums text-zinc-700 dark:text-zinc-300">
               {usd(line.amount)}
@@ -97,9 +109,9 @@ export function PriceBreakdown({
             <div className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
               At the event
             </div>
-            {reconcileFees.map((line) => (
+            {reconcileFees.map((line, i) => (
               <div
-                key={line.label}
+                key={feeKey(line, i)}
                 className="flex items-baseline justify-between"
               >
                 <dt className="text-zinc-600 dark:text-zinc-400">
