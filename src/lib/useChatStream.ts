@@ -265,22 +265,13 @@ async function postAndStream({
     const decoder = new TextDecoder();
     let buffer = "";
 
-    // SSE frames are separated by a blank line. Each frame begins with
-    // `data: <json>`; ignore other field names since our server only emits
-    // `data:`.
     while (true) {
       const { value, done } = await reader.read();
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
-      let sep = buffer.indexOf("\n\n");
-      while (sep !== -1) {
-        const frame = buffer.slice(0, sep);
-        buffer = buffer.slice(sep + 2);
-        sep = buffer.indexOf("\n\n");
-        const line = frame.split("\n").find((l) => l.startsWith("data:"));
-        if (!line) continue;
-        const payload = line.slice(line.indexOf(":") + 1).trim();
-        if (!payload) continue;
+      const { payloads, remainder } = drainSsePayloads(buffer);
+      buffer = remainder;
+      for (const payload of payloads) {
         // A malformed frame shouldn't kill the whole stream. Log and skip;
         // the next valid frame will continue updating the UI.
         let event: ChatStreamEvent;
@@ -307,6 +298,31 @@ async function postAndStream({
     }
     inFlightRef.current.delete(venueId);
   }
+}
+
+// Extract complete SSE frames from the rolling buffer. SSE frames are
+// separated by a blank line; each frame is a set of `field: value` lines.
+// We only care about the `data:` line — the server doesn't emit anything
+// else. Empty-payload frames are dropped silently (the keepalive comment
+// pattern, or a trailing newline). The trailing partial frame, if any,
+// is returned as the new remainder so the next chunk can complete it.
+export function drainSsePayloads(buffer: string): {
+  payloads: string[];
+  remainder: string;
+} {
+  const payloads: string[] = [];
+  let cursor = 0;
+  while (true) {
+    const sep = buffer.indexOf("\n\n", cursor);
+    if (sep === -1) break;
+    const frame = buffer.slice(cursor, sep);
+    cursor = sep + 2;
+    const line = frame.split("\n").find((l) => l.startsWith("data:"));
+    if (!line) continue;
+    const payload = line.slice(line.indexOf(":") + 1).trim();
+    if (payload) payloads.push(payload);
+  }
+  return { payloads, remainder: buffer.slice(cursor) };
 }
 
 function applyEvent(
