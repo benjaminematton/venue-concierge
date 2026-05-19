@@ -13,7 +13,7 @@ const VENUE_SUMMARIES = listVenueSummaries();
 export default function Home() {
   const [venueId, setVenueId] = useState(VENUES[0].id);
   const venue = VENUES.find((v) => v.id === venueId) ?? VENUES[0];
-  const { messages, quote, isStreaming, error, send, clearError } =
+  const { messages, quote, isStreaming, error, send, clearError, stop } =
     useChatStream(venueId);
 
   return (
@@ -56,6 +56,7 @@ export default function Home() {
           messages={messages}
           venueName={venue.name}
           onSubmit={send}
+          onStop={stop}
           isStreaming={isStreaming}
           suggestedPrompts={suggestedPromptsFor(venue.id)}
         />

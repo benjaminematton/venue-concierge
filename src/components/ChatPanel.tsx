@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowUp } from "lucide-react";
+import { ArrowUp, Square } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
 import { canSubmit, keyIntent, turnStatus } from "./ChatPanel.logic";
 import type { ChatMessage } from "@/types/chat";
@@ -10,6 +10,9 @@ interface ChatPanelProps {
   messages: ChatMessage[];
   venueName: string;
   onSubmit: (text: string) => void;
+  // Optional: aborts the active stream. When provided and isStreaming is
+  // true, the send button becomes a stop button.
+  onStop?: () => void;
   isStreaming?: boolean;
   disabled?: boolean;
   suggestedPrompts?: string[];
@@ -25,6 +28,7 @@ export function ChatPanel({
   messages,
   venueName,
   onSubmit,
+  onStop,
   isStreaming = false,
   disabled = false,
   suggestedPrompts = [],
@@ -156,14 +160,25 @@ export function ChatPanel({
           disabled={disabled}
           className="min-h-[2.5rem] flex-1 resize-none rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600 dark:focus:ring-zinc-800"
         />
-        <button
-          type="submit"
-          disabled={!canSend}
-          aria-label="Send message"
-          className="grid size-10 shrink-0 place-items-center rounded-xl bg-zinc-900 text-zinc-50 transition disabled:opacity-30 hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
-        >
-          <ArrowUp className="size-4" aria-hidden />
-        </button>
+        {isStreaming && onStop ? (
+          <button
+            type="button"
+            onClick={onStop}
+            aria-label="Stop generating"
+            className="grid size-10 shrink-0 place-items-center rounded-xl bg-zinc-900 text-zinc-50 transition hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+          >
+            <Square className="size-3.5 fill-current" aria-hidden />
+          </button>
+        ) : (
+          <button
+            type="submit"
+            disabled={!canSend}
+            aria-label="Send message"
+            className="grid size-10 shrink-0 place-items-center rounded-xl bg-zinc-900 text-zinc-50 transition disabled:opacity-30 hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+          >
+            <ArrowUp className="size-4" aria-hidden />
+          </button>
+        )}
       </form>
     </section>
   );

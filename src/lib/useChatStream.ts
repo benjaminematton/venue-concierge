@@ -23,6 +23,10 @@ interface UseChatStream {
   error: string | null;
   send: (text: string) => void;
   clearError: () => void;
+  // Cancel the active stream for this venue. Aborts the fetch + the
+  // upstream Anthropic stream (the API route forwards req.signal). Any
+  // partial assistant text already streamed stays in the transcript.
+  stop: () => void;
 }
 
 // Per-venue conversation bucket. Every venue gets its own; switching venues
@@ -205,6 +209,14 @@ export function useChatStream(venueId: string): UseChatStream {
     dispatch({ type: "clear_error", venueId });
   }, [venueId]);
 
+  const stop = useCallback(() => {
+    const controller = controllersRef.current.get(venueId);
+    if (!controller) return;
+    controller.abort();
+    // postAndStream's finally block will fire stream_end + clean up the
+    // controller and the in-flight flag; nothing else to do here.
+  }, [venueId]);
+
   return {
     messages: state.messages,
     quote: state.quote,
@@ -212,6 +224,7 @@ export function useChatStream(venueId: string): UseChatStream {
     error: state.error,
     send,
     clearError,
+    stop,
   };
 }
 
