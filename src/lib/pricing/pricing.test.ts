@@ -322,6 +322,17 @@ describe("weekdayInTz", () => {
     expect(weekdayInTz("", TZ)).toBeUndefined();
     expect(weekdayInTz("not-a-date", TZ)).toBeUndefined();
   });
+
+  // tools.ts indexes DAY_SHORTS = ["Sun","Mon",...,"Sat"] by the value of
+  // weekdayInTz to look up the venue's weeklyHours entry. This pins down
+  // the contract: weekdayInTz's index is the same Sun..Sat ordering.
+  it("round-trips against a Sun..Sat short-day array", () => {
+    const SHORTS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    expect(SHORTS[weekdayInTz("2026-07-15", TZ)!]).toBe("Wed");
+    expect(SHORTS[weekdayInTz("2026-07-17", TZ)!]).toBe("Fri");
+    expect(SHORTS[weekdayInTz("2026-07-18", TZ)!]).toBe("Sat");
+    expect(SHORTS[weekdayInTz("2026-07-19", TZ)!]).toBe("Sun");
+  });
 });
 
 describe("hourFromTime", () => {
@@ -330,10 +341,23 @@ describe("hourFromTime", () => {
     expect(hourFromTime("07:30")).toBe(7);
   });
 
+  it("accepts hours at the boundary (00 and 23)", () => {
+    expect(hourFromTime("00:00")).toBe(0);
+    expect(hourFromTime("23:59")).toBe(23);
+  });
+
   it("returns undefined for empty or invalid input", () => {
     expect(hourFromTime(undefined)).toBeUndefined();
     expect(hourFromTime("")).toBeUndefined();
     expect(hourFromTime("xx:30")).toBeUndefined();
+  });
+
+  it("rejects out-of-range hours and malformed strings", () => {
+    expect(hourFromTime("24:00")).toBeUndefined();
+    expect(hourFromTime("25:00")).toBeUndefined();
+    expect(hourFromTime("9:00")).toBeUndefined(); // missing zero-pad
+    expect(hourFromTime("19-00")).toBeUndefined();
+    expect(hourFromTime("19:0")).toBeUndefined();
   });
 });
 

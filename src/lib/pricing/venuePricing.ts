@@ -215,8 +215,10 @@ export function packageBaseLine(
 
 export function hourFromTime(time: string | undefined): number | undefined {
   if (!time) return undefined;
+  if (!/^\d{2}:\d{2}$/.test(time)) return undefined;
   const h = parseInt(time.slice(0, 2), 10);
-  return Number.isFinite(h) ? h : undefined;
+  if (!Number.isFinite(h) || h < 0 || h > 23) return undefined;
+  return h;
 }
 
 // Resolve the new spaceId when the user switches packages. Keeps the previous
