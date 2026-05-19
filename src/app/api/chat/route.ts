@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { z } from "zod";
 import type { MessageParam } from "@anthropic-ai/sdk/resources/messages";
 import { runAgent } from "@/lib/agent/stream";
+import { checkRateLimit, getClientIp } from "@/lib/ratelimit";
 import { getVenueWithVoice } from "@/lib/venues.server";
 import type { ChatStreamEvent } from "@/types/chat";
 
@@ -37,6 +38,22 @@ export async function POST(req: NextRequest) {
   }
 
   const { venueId, messages } = parsed.data;
+
+  const ip = getClientIp(req);
+  const rl = await checkRateLimit(ip);
+  if (!rl.allowed) {
+    const minutes = rl.resetAt
+      ? Math.max(1, Math.ceil((rl.resetAt - Date.now()) / 60_000))
+      : null;
+    const detail = minutes
+      ? `Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.`
+      : "Try again later.";
+    return new Response(
+      `Daily message limit reached for this demo. ${detail}`,
+      { status: 429 },
+    );
+  }
+
   const venue = getVenueWithVoice(venueId);
   if (!venue) {
     return new Response(`Unknown venue: ${venueId}`, { status: 404 });
