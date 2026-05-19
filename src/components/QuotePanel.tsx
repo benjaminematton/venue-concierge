@@ -40,6 +40,10 @@ export function QuotePanel({
 
       {ready ? (
         <PriceBreakdown
+          // Key so the entry animation re-fires when the agent re-quotes
+          // against new inputs (the same component instance otherwise
+          // updates in place and the animation only runs on mount).
+          key={`${pkg.id}-${date}-${guests}`}
           breakdown={breakdown}
           packageLabel={pkg.label}
           venueName={venue.name}

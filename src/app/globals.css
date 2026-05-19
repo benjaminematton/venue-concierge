@@ -24,3 +24,25 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
+
+/* Quote entry animation. Applied to PriceBreakdown each time a new quote
+   lands; QuotePanel keys the component on (packageId, dateISO, guests) so
+   the animation re-fires when the agent re-quotes against new inputs. */
+@keyframes quote-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.quote-enter {
+  animation: quote-enter 220ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .quote-enter {
+    animation: none;
+  }
+}

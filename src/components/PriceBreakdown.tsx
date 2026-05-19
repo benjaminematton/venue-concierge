@@ -47,7 +47,7 @@ export function PriceBreakdown({
   const isFbMinimum = breakdown.depositSemantics === "AppliedToTab";
 
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+    <div className="quote-enter rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
       <header className="flex items-baseline justify-between gap-4">
         <div>
           <div className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
