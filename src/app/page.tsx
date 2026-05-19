@@ -1,90 +1,23 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import { AlertTriangle } from "lucide-react";
 import { ChatPanel } from "@/components/ChatPanel";
 import { QuotePanel } from "@/components/QuotePanel";
-import { computeBreakdown } from "@/lib/pricing/venuePricing";
+import { useChatStream } from "@/lib/useChatStream";
 import { VENUES, listVenueSummaries } from "@/lib/venues";
-import type { ChatMessage } from "@/types/chat";
 
 const VENUE_SUMMARIES = listVenueSummaries();
 
-// Hardcoded selection used to prove the QuotePanel renders against real
-// venue data. The chat will drive these once the agent is wired — at that
-// point these become state and need to enter the useMemo deps below.
-const DATE = "2026-06-15";
-const TIME = "19:00";
-const GUESTS = 25;
-
-// Seeded transcript that exercises every visual: customer message, assistant
-// reply with two tool-call pills, follow-up assistant text. Replaces itself
-// with live agent output once /api/chat lands.
-const SEEDED_MESSAGES: ChatMessage[] = [
-  {
-    id: "seed-1",
-    role: "user",
-    text: "Hi! Looking to host a 25-person rehearsal dinner on June 15 at 7pm. Any chance the back room is open?",
-  },
-  {
-    id: "seed-2",
-    role: "assistant",
-    text: "Hey! Great timing — Monday June 15 at 7pm is open for the back room. Quick estimate based on a weekday F&B minimum, with the booking fee:",
-    toolCalls: [
-      {
-        id: "tc-1",
-        name: "check_availability",
-        status: "ok",
-        argsSummary: "2026-06-15, 19:00",
-      },
-      {
-        id: "tc-2",
-        name: "compute_quote",
-        status: "ok",
-        argsSummary: "quail-buyout × 25",
-      },
-    ],
-  },
-  {
-    id: "seed-3",
-    role: "assistant",
-    text: "The $300 reservation deposit credits back to your tab at the venue, so you're really just out the $35 booking fee plus service. Want me to hold the date?",
-  },
-];
-
 export default function Home() {
   const [venueId, setVenueId] = useState(VENUES[0].id);
-  const [messages, setMessages] = useState<ChatMessage[]>(SEEDED_MESSAGES);
+  const venue = VENUES.find((v) => v.id === venueId) ?? VENUES[0];
+  const { messages, quote, isStreaming, error, send } = useChatStream(venueId);
 
-  const venue = VENUES.find((v) => v.id === venueId)!;
-  const pkg = venue.packages[0];
-
-  const breakdown = useMemo(
-    () =>
-      pkg
-        ? computeBreakdown(venue, pkg, {
-            date: DATE,
-            time: TIME,
-            guests: GUESTS,
-            packageId: pkg.id,
-            spaceId: pkg.appliesToSpaceIds[0] ?? null,
-          })
-        : null,
-    [venue, pkg],
-  );
-
-  function handleSwitchVenue(nextId: string) {
-    setVenueId(nextId);
-    setMessages([]);
-  }
-
-  function handleSubmit(text: string) {
-    // Until the agent route is wired, every submission just lands as a user
-    // message so the composer + scroll behavior can be sanity-checked.
-    setMessages((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), role: "user", text },
-    ]);
-  }
+  // Only surface the quote when it belongs to the active venue. The hook
+  // resets on venue change but this guard keeps a race from showing the
+  // wrong venue's numbers mid-switch.
+  const activeQuote = quote && quote.venueId === venueId ? quote : null;
 
   return (
     <div className="flex flex-1 flex-col font-sans">
@@ -104,21 +37,31 @@ export default function Home() {
         </div>
       </header>
 
+      {error && (
+        <div className="border-b border-red-200 bg-red-50 px-6 py-2.5 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
+          <div className="mx-auto flex w-full max-w-6xl items-center gap-2">
+            <AlertTriangle className="size-4 shrink-0" aria-hidden />
+            <span>{error}</span>
+          </div>
+        </div>
+      )}
+
       <main className="mx-auto grid w-full max-w-6xl flex-1 grid-cols-1 gap-6 px-6 py-6 md:grid-cols-[1fr_24rem]">
         <ChatPanel
           messages={messages}
           venueName={venue.name}
-          onSubmit={handleSubmit}
+          onSubmit={send}
+          isStreaming={isStreaming}
         />
         <aside>
           <QuotePanel
             venue={venue}
             venues={VENUE_SUMMARIES}
-            breakdown={breakdown}
-            selectedPackageId={pkg?.id ?? null}
-            date={DATE}
-            guests={GUESTS}
-            onSwitchVenue={handleSwitchVenue}
+            breakdown={activeQuote?.breakdown ?? null}
+            selectedPackageId={activeQuote?.packageId ?? null}
+            date={activeQuote?.dateISO ?? null}
+            guests={activeQuote?.guests ?? null}
+            onSwitchVenue={setVenueId}
           />
         </aside>
       </main>
