@@ -196,17 +196,22 @@ describe("runComputeQuote", () => {
   });
 
   it("returns AMBIGUOUS_SPACE when the package allows multiple spaces and none specified", () => {
+    // Use tagged names ("FixtureSpaceA/B") rather than common words like
+    // "Main"/"Patio" — those would collide with substrings of unrelated
+    // copy ("Main thing is…"), giving a false-positive `toContain` match.
+    // Distinctive names couple the assertion to the fixture, not to UX
+    // wording that may drift.
     const multiSpaceVenue = venueWith({
       spaces: [
-        { id: "main", name: "Main", maxCapacity: 40, facilities: [] },
-        { id: "patio", name: "Patio", maxCapacity: 30, facilities: [] },
+        { id: "s-a", name: "FixtureSpaceA", maxCapacity: 40, facilities: [] },
+        { id: "s-b", name: "FixtureSpaceB", maxCapacity: 30, facilities: [] },
       ],
       packages: [
         {
           id: "pkg-multi",
           label: "Either Room",
           blurb: "",
-          appliesToSpaceIds: ["main", "patio"],
+          appliesToSpaceIds: ["s-a", "s-b"],
           maxGuests: 40,
           durationMinutes: 180,
           privacyMode: "Private",
@@ -228,8 +233,8 @@ describe("runComputeQuote", () => {
     // The action must name BOTH options (using display names, since that's
     // what the customer would recognise) so the agent has something concrete
     // to ask about — not just one.
-    expect(r.error.suggested_action).toContain("Main");
-    expect(r.error.suggested_action).toContain("Patio");
+    expect(r.error.suggested_action).toContain("FixtureSpaceA");
+    expect(r.error.suggested_action).toContain("FixtureSpaceB");
   });
 
   it("accepts a valid spaceId when the package allows multiple", () => {
@@ -302,5 +307,12 @@ describe("summarizeArgs", () => {
 
   it("uses '?' placeholders for missing or wrong-type fields", () => {
     expect(summarizeArgs("check_availability", {})).toBe("?, ? guests");
+    // compute_quote: missing packageId becomes "?"; missing guests drops the
+    // " × N" suffix entirely (trim() collapses the trailing space).
+    expect(summarizeArgs("compute_quote", {})).toBe("?");
+    expect(summarizeArgs("compute_quote", { guests: 25 })).toBe("? × 25");
+    expect(summarizeArgs("compute_quote", { packageId: "pkg-main" })).toBe(
+      "pkg-main",
+    );
   });
 });
