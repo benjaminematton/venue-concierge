@@ -104,6 +104,14 @@ export interface VenueVoice {
 // or non-prompt code touches a venue.
 export type PublicVenueListing = Omit<VenueListing, "voice">;
 
+// Drop the server-only `voice` field. Lives next to the type so the two
+// can't drift apart.
+export function stripVoice(v: VenueListing): PublicVenueListing {
+  const { voice: _voice, ...rest } = v;
+  void _voice;
+  return rest;
+}
+
 export interface VenueListing {
   id: string;
   slug: string;

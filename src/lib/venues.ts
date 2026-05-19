@@ -1,9 +1,10 @@
 import venuesData from "../../data/venues.json";
 import { parseVenues } from "./pricing/venueSchema";
-import type {
-  PublicVenueListing,
-  VenueListing,
-  VenueSummary,
+import {
+  stripVoice,
+  type PublicVenueListing,
+  type VenueListing,
+  type VenueSummary,
 } from "./pricing/types";
 
 // Static catalog. 3 hand-curated venues with contrasting pricing models and
@@ -21,12 +22,6 @@ import type {
 const FULL: readonly VenueListing[] = Object.freeze(parseVenues(venuesData));
 
 export const VENUES: readonly PublicVenueListing[] = FULL.map(stripVoice);
-
-function stripVoice(v: VenueListing): PublicVenueListing {
-  const { voice, ...rest } = v;
-  void voice;
-  return rest;
-}
 
 export function getVenue(id: string): PublicVenueListing | undefined {
   return VENUES.find((v) => v.id === id);
