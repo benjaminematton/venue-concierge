@@ -23,6 +23,11 @@ interface ChatPanelProps {
 const TEXTAREA_MAX_PX = 128;
 // Distance (px) from the bottom within which we consider the list "pinned".
 const STICK_THRESHOLD_PX = 64;
+// Single source for composer button labels — feeds both aria-label
+// (assistive tech) and title (sighted-mouse hover hint), so copy can't
+// drift between the two.
+const STOP_LABEL = "Stop generating";
+const SEND_LABEL = "Send message";
 
 export function ChatPanel({
   messages,
@@ -164,8 +169,8 @@ export function ChatPanel({
           <button
             type="button"
             onClick={onStop}
-            aria-label="Stop generating"
-            title="Stop generating"
+            aria-label={STOP_LABEL}
+            title={STOP_LABEL}
             className="grid size-10 shrink-0 place-items-center rounded-xl bg-zinc-900 text-zinc-50 transition hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
             <Square className="size-3.5 fill-current" aria-hidden />
@@ -174,8 +179,8 @@ export function ChatPanel({
           <button
             type="submit"
             disabled={!canSend}
-            aria-label="Send message"
-            title="Send message"
+            aria-label={SEND_LABEL}
+            title={SEND_LABEL}
             className="grid size-10 shrink-0 place-items-center rounded-xl bg-zinc-900 text-zinc-50 transition disabled:opacity-30 hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
             <ArrowUp className="size-4" aria-hidden />
