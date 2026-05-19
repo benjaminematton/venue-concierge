@@ -22,6 +22,7 @@ interface UseChatStream {
   isStreaming: boolean;
   error: string | null;
   send: (text: string) => void;
+  clearError: () => void;
 }
 
 // Per-venue conversation bucket. Every venue gets its own; switching venues
@@ -65,7 +66,8 @@ type Action =
     }
   | { type: "quote_update"; venueId: string; quote: ActiveQuote }
   | { type: "stream_end"; venueId: string }
-  | { type: "error"; venueId: string; message: string };
+  | { type: "error"; venueId: string; message: string }
+  | { type: "clear_error"; venueId: string };
 
 function reducer(state: State, action: Action): State {
   const cur = state[action.venueId] ?? EMPTY;
@@ -133,6 +135,9 @@ function reducer(state: State, action: Action): State {
 
     case "error":
       return put({ error: action.message, isStreaming: false });
+
+    case "clear_error":
+      return put({ error: null });
   }
 }
 
@@ -196,12 +201,17 @@ export function useChatStream(venueId: string): UseChatStream {
     [venueId, state.messages, state.isStreaming],
   );
 
+  const clearError = useCallback(() => {
+    dispatch({ type: "clear_error", venueId });
+  }, [venueId]);
+
   return {
     messages: state.messages,
     quote: state.quote,
     isStreaming: state.isStreaming,
     error: state.error,
     send,
+    clearError,
   };
 }
 
