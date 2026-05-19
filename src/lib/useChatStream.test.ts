@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { drainSsePayloads, postAndStream } from "./useChatStream";
+import { drainSsePayloads, postAndStream, type Action } from "./useChatStream";
 
 describe("drainSsePayloads", () => {
   it("extracts a single complete frame", () => {
@@ -83,6 +83,16 @@ describe("drainSsePayloads", () => {
     expect(payloads).toEqual([`line one\nline two`]);
   });
 
+  it("joins two empty data: lines into a single '\\n' payload", () => {
+    // Asymmetric counterpart to the single-empty-line keepalive case:
+    // one empty data: drops, two empties join to "\n" (spec-correct).
+    // Pins behavior so a future "drop whitespace-only payloads" tweak
+    // can't silently change the contract.
+    const buf = `data:\ndata:\n\n`;
+    const { payloads } = drainSsePayloads(buf);
+    expect(payloads).toEqual([`\n`]);
+  });
+
   it("handles a chunk boundary in the middle of a frame", () => {
     // Simulate reading two TCP chunks: stitch them and re-drain. The
     // remainder from the first call carries the partial frame forward.
@@ -119,22 +129,24 @@ describe("postAndStream — abort contract", () => {
       });
     }) as typeof globalThis.fetch;
 
-    const dispatched: { type: string }[] = [];
+    const dispatched: Action[] = [];
+    const dispatch: React.Dispatch<Action> = (a) => {
+      dispatched.push(a);
+    };
     const controllersRef = { current: new Map<string, AbortController>() };
     const inFlightRef = { current: new Set<string>(["v-1"]) };
 
+    // postAndStream is async, so the body runs synchronously up to the first
+    // `await fetch(...)` — the controller is registered before the call
+    // returns. No need to yield here; if a future refactor inserts an await
+    // before the registration, this assertion should fail loudly.
     const promise = postAndStream({
       venueId: "v-1",
       history: [],
-      // The dispatcher in the hook is React.Dispatch<Action>; the test
-      // only inspects `type`, so a structural recorder is enough.
-      dispatch: ((a: { type: string }) => dispatched.push(a)) as never,
+      dispatch,
       controllersRef,
       inFlightRef,
     });
-
-    // Yield once so postAndStream has populated the controllers map.
-    await Promise.resolve();
     expect(controllersRef.current.has("v-1")).toBe(true);
 
     controllersRef.current.get("v-1")!.abort();

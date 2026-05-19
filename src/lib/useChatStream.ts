@@ -51,7 +51,8 @@ type State = Record<string, VenueStream>;
 
 // All actions carry venueId. The reducer is pure — no closures over React
 // state, no race conditions on switch, no abort coordination needed.
-type Action =
+// Exported so tests can type a dispatch recorder against the real shape.
+export type Action =
   | { type: "send"; venueId: string; userMessage: ChatMessage }
   | { type: "message_start"; venueId: string; messageId: string }
   | { type: "text_delta"; venueId: string; messageId: string; delta: string }
