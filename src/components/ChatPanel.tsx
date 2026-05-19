@@ -165,6 +165,7 @@ export function ChatPanel({
             type="button"
             onClick={onStop}
             aria-label="Stop generating"
+            title="Stop generating"
             className="grid size-10 shrink-0 place-items-center rounded-xl bg-zinc-900 text-zinc-50 transition hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
             <Square className="size-3.5 fill-current" aria-hidden />
@@ -174,6 +175,7 @@ export function ChatPanel({
             type="submit"
             disabled={!canSend}
             aria-label="Send message"
+            title="Send message"
             className="grid size-10 shrink-0 place-items-center rounded-xl bg-zinc-900 text-zinc-50 transition disabled:opacity-30 hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
             <ArrowUp className="size-4" aria-hidden />
