@@ -236,7 +236,10 @@ interface PostArgs {
   inFlightRef: React.RefObject<Set<string>>;
 }
 
-async function postAndStream({
+// Exported for unit tests that exercise the abort contract end-to-end
+// (mocked fetch + manual controller.abort() → expect a clean stream_end).
+// Not part of the public hook API; treat as internal.
+export async function postAndStream({
   venueId,
   history,
   dispatch,
@@ -300,26 +303,35 @@ async function postAndStream({
   }
 }
 
-// Extract complete SSE frames from the rolling buffer. SSE frames are
-// separated by a blank line; each frame is a set of `field: value` lines.
-// We only care about the `data:` line — the server doesn't emit anything
-// else. Empty-payload frames are dropped silently (the keepalive comment
-// pattern, or a trailing newline). The trailing partial frame, if any,
-// is returned as the new remainder so the next chunk can complete it.
+// Extract complete SSE frames from the rolling buffer. Per spec, frames
+// are separated by a blank line and lines may end with \n, \r\n, or \r.
+// We accept all three blank-line forms (\n\n, \r\n\r\n, \r\r) so that a
+// proxy normalizing line endings doesn't cause frames to buffer forever.
+// Multiple `data:` lines in one frame are concatenated with \n, also per
+// spec. Empty-payload frames (keepalive pattern, trailing newline) are
+// dropped silently. The trailing partial frame, if any, is returned as
+// the new remainder so the next chunk can complete it.
 export function drainSsePayloads(buffer: string): {
   payloads: string[];
   remainder: string;
 } {
   const payloads: string[] = [];
   let cursor = 0;
-  while (true) {
-    const sep = buffer.indexOf("\n\n", cursor);
-    if (sep === -1) break;
-    const frame = buffer.slice(cursor, sep);
-    cursor = sep + 2;
-    const line = frame.split("\n").find((l) => l.startsWith("data:"));
-    if (!line) continue;
-    const payload = line.slice(line.indexOf(":") + 1).trim();
+  for (const m of buffer.matchAll(/\r\n\r\n|\n\n|\r\r/g)) {
+    const frame = buffer.slice(cursor, m.index);
+    cursor = m.index + m[0].length;
+
+    // Collect every `data:` line. Strip the field name plus a single
+    // optional leading space (per spec — not `trim()`, which would also
+    // eat meaningful whitespace inside the payload).
+    const parts: string[] = [];
+    for (const rawLine of frame.split(/\r\n|\r|\n/)) {
+      if (!rawLine.startsWith("data:")) continue;
+      const v = rawLine.slice(5);
+      parts.push(v.startsWith(" ") ? v.slice(1) : v);
+    }
+    if (parts.length === 0) continue;
+    const payload = parts.join("\n");
     if (payload) payloads.push(payload);
   }
   return { payloads, remainder: buffer.slice(cursor) };

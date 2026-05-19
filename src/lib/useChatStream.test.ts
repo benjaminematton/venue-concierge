@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { drainSsePayloads } from "./useChatStream";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { drainSsePayloads, postAndStream } from "./useChatStream";
 
 describe("drainSsePayloads", () => {
   it("extracts a single complete frame", () => {
@@ -56,13 +56,31 @@ describe("drainSsePayloads", () => {
     expect(payloads).toEqual([`{"venueId":"the-quail","ratio":0.22}`]);
   });
 
-  it("trims leading whitespace after the colon", () => {
-    // The protocol allows "data: value" with one space; the parser should
-    // tolerate it (and zero spaces too).
+  it("tolerates both `data: x` and `data:x`", () => {
+    // Per spec, exactly one optional leading space after the colon is
+    // consumed — both spellings should produce the same payload.
     const buf1 = `data: {"a":1}\n\n`;
     const buf2 = `data:{"a":1}\n\n`;
     expect(drainSsePayloads(buf1).payloads).toEqual([`{"a":1}`]);
     expect(drainSsePayloads(buf2).payloads).toEqual([`{"a":1}`]);
+  });
+
+  it("accepts CRLF blank-line separators", () => {
+    // Some proxies normalize \n to \r\n on the wire. We must still find
+    // the frame boundary or the stream stalls until the connection closes.
+    const buf = `data: {"a":1}\r\n\r\ndata: {"b":2}\r\n\r\n`;
+    const { payloads, remainder } = drainSsePayloads(buf);
+    expect(payloads).toEqual([`{"a":1}`, `{"b":2}`]);
+    expect(remainder).toBe("");
+  });
+
+  it("concatenates multiple data: lines in one frame with \\n", () => {
+    // Per spec, multi-line values are split across consecutive data:
+    // fields and joined by \n. A naive single-line-only parser would
+    // silently drop everything after the first data: line.
+    const buf = `data: line one\ndata: line two\n\n`;
+    const { payloads } = drainSsePayloads(buf);
+    expect(payloads).toEqual([`line one\nline two`]);
   });
 
   it("handles a chunk boundary in the middle of a frame", () => {
@@ -75,5 +93,55 @@ describe("drainSsePayloads", () => {
     expect(r1.payloads).toEqual([`{"a":1}`]);
     expect(r2.payloads).toEqual([`{"b":2}`]);
     expect(r2.remainder).toBe("");
+  });
+});
+
+// The stop button contract: aborting the AbortController for the active
+// venue must (1) unwind fetch cleanly, (2) NOT dispatch an error (the
+// AbortError is the expected exit, not a failure), (3) fire stream_end so
+// `isStreaming` flips back to false, (4) clean up the controller map and
+// the in-flight flag so a subsequent send can proceed.
+describe("postAndStream — abort contract", () => {
+  const realFetch = globalThis.fetch;
+  afterEach(() => {
+    globalThis.fetch = realFetch;
+    vi.restoreAllMocks();
+  });
+
+  it("controller.abort() produces stream_end with no error dispatch", async () => {
+    // fetch hangs until the caller's signal aborts, then rejects with
+    // AbortError — same shape as the real Fetch API contract.
+    globalThis.fetch = vi.fn((_url: RequestInfo | URL, init?: RequestInit) => {
+      return new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          reject(new DOMException("aborted", "AbortError"));
+        });
+      });
+    }) as typeof globalThis.fetch;
+
+    const dispatched: { type: string }[] = [];
+    const controllersRef = { current: new Map<string, AbortController>() };
+    const inFlightRef = { current: new Set<string>(["v-1"]) };
+
+    const promise = postAndStream({
+      venueId: "v-1",
+      history: [],
+      // The dispatcher in the hook is React.Dispatch<Action>; the test
+      // only inspects `type`, so a structural recorder is enough.
+      dispatch: ((a: { type: string }) => dispatched.push(a)) as never,
+      controllersRef,
+      inFlightRef,
+    });
+
+    // Yield once so postAndStream has populated the controllers map.
+    await Promise.resolve();
+    expect(controllersRef.current.has("v-1")).toBe(true);
+
+    controllersRef.current.get("v-1")!.abort();
+    await promise;
+
+    expect(dispatched.map((a) => a.type)).toEqual(["stream_end"]);
+    expect(controllersRef.current.size).toBe(0);
+    expect(inFlightRef.current.size).toBe(0);
   });
 });
