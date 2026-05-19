@@ -37,15 +37,16 @@ async function record(): Promise<string> {
   // open on a flash of empty state.
   await page.getByRole("button", { name: /back room/i }).first().waitFor();
 
-  // Hold on the empty state for half a second so the viewer sees the
-  // suggested chips before we start typing.
-  await page.waitForTimeout(500);
+  // Hold on the empty state long enough for the viewer to actually
+  // read the headline + at least one chip before typing begins.
+  await page.waitForTimeout(1500);
 
-  const composer = page.getByPlaceholder(/Message /);
+  const composer = page.getByPlaceholder(/Write to /);
   await composer.click();
-  // Type at ~50ms/char — fast enough to keep the GIF under 15s, slow
-  // enough that the human eye reads it as typing, not pasting.
-  await composer.type(PROMPT, { delay: 50 });
+  // ~45ms/char — fast enough to keep the GIF under 15s, slow enough
+  // that the human eye reads it as typing, not pasting.
+  // pressSequentially is the non-deprecated replacement for .type().
+  await composer.pressSequentially(PROMPT, { delay: 45 });
   // Brief pause before pressing Enter so the full prompt is readable.
   await page.waitForTimeout(300);
   await composer.press("Enter");
@@ -79,18 +80,24 @@ function run(cmd: string, args: string[]): Promise<void> {
 }
 
 async function convertToGif(webm: string) {
-  // Two-pass palette generation gives noticeably better colour fidelity
-  // than ffmpeg's default GIF encoder, especially on the venue-branded
-  // emerald accent and the dark zinc text.
+  // Palette generation tuned for the editorial cream-and-vermillion
+  // palette + the paper-grain noise overlay. Lower fps (12) and a
+  // smaller palette (64 colors) trade marginal smoothness for
+  // significantly smaller GIFs — grain texture defeats LZW
+  // compression at higher color counts, ballooning file size with
+  // no visible quality gain.
   const palette = join(VIDEO_DIR, "palette.png");
   const filters =
-    "fps=15,scale=900:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=128[p];[b][p]paletteuse=dither=bayer:bayer_scale=5";
+    "fps=12,scale=860:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=64:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle";
 
   console.log("running ffmpeg…");
-  // Single-pass version of palettegen+paletteuse via complex filter — same
-  // quality as two-pass, half the I/O.
+  // -ss before -i seeks the input. Playwright starts recording at
+  // context creation, so the first ~1.5s is the blank page loading.
+  // Skipping it puts the first GIF frame on the rendered empty state.
   await run("ffmpeg", [
     "-y",
+    "-ss",
+    "0.9",
     "-i",
     webm,
     "-vf",
