@@ -10,11 +10,20 @@ interface MessageBubbleProps {
   // identity speaking, not a generic "assistant", so the parent threads
   // the active venue's name through here.
   venueName: string;
+  // True only for the active streaming assistant turn. Gates the empty-
+  // bubble "…" placeholder so older bubbles that ended with only tool
+  // calls render as empty, not as forever-loading.
+  isStreamingTurn?: boolean;
 }
 
-export function MessageBubble({ message, venueName }: MessageBubbleProps) {
+export function MessageBubble({
+  message,
+  venueName,
+  isStreamingTurn = false,
+}: MessageBubbleProps) {
   const isVenue = message.role === "assistant";
   const toolCalls = message.toolCalls ?? [];
+  const showPlaceholder = isVenue && !message.text && isStreamingTurn;
 
   return (
     <div
@@ -28,18 +37,20 @@ export function MessageBubble({ message, venueName }: MessageBubbleProps) {
           {venueName}
         </div>
       )}
-      <div
-        className={cn(
-          "max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
-          isVenue
-            ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50"
-            : "bg-zinc-900 text-zinc-50 dark:bg-zinc-50 dark:text-zinc-900",
-        )}
-      >
-        {message.text || (
-          <span className="text-zinc-400 dark:text-zinc-500">…</span>
-        )}
-      </div>
+      {(message.text || showPlaceholder) && (
+        <div
+          className={cn(
+            "max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
+            isVenue
+              ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50"
+              : "bg-zinc-900 text-zinc-50 dark:bg-zinc-50 dark:text-zinc-900",
+          )}
+        >
+          {message.text || (
+            <span className="text-zinc-400 dark:text-zinc-500">…</span>
+          )}
+        </div>
+      )}
       {toolCalls.length > 0 && (
         <div className="flex flex-wrap gap-1.5 px-1">
           {toolCalls.map((tc) => (

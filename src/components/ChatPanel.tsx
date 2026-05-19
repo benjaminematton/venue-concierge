@@ -123,8 +123,17 @@ export function ChatPanel({
             )}
           </div>
         ) : (
-          messages.map((m) => (
-            <MessageBubble key={m.id} message={m} venueName={venueName} />
+          messages.map((m, i) => (
+            <MessageBubble
+              key={m.id}
+              message={m}
+              venueName={venueName}
+              // Only the most recent assistant turn shows the streaming
+              // ellipsis placeholder. An empty older bubble (rare, but
+              // possible if a turn ended with only tool calls) renders
+              // empty instead of forever-loading.
+              isStreamingTurn={isStreaming && i === messages.length - 1}
+            />
           ))
         )}
       </div>
