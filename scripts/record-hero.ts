@@ -11,8 +11,12 @@ import { join } from "node:path";
 import { chromium } from "playwright";
 
 const DEMO_URL = process.env.DEMO_URL ?? "https://venue-concierge.vercel.app";
-const PROMPT =
-  "Hi! 25 people on Tuesday June 16, 2026 at 7pm — what's the back room look like?";
+// Two-turn arc: vague open → agent asks for the date → specifics → tools
+// fire and the quote lands. Shows the clarifying behavior AND the
+// tool-use loop in one take, instead of a one-shot complete-request.
+const TURN_1 = "Hosting a rehearsal dinner — 25 friends and family.";
+const TURN_2 = "Could we do Friday June 19 at 7pm in the back room?";
+const TYPE_DELAY_MS = 35;
 
 const VIDEO_DIR = join(process.cwd(), "scripts", "video-tmp");
 const OUTPUT_GIF = join(process.cwd(), "public", "hero.gif");
@@ -36,31 +40,38 @@ async function record(): Promise<string> {
   // least one to be visible before we start typing so the GIF doesn't
   // open on a flash of empty state.
   await page.getByRole("button", { name: /back room/i }).first().waitFor();
-
-  // Hold on the empty state long enough for the viewer to actually
-  // read the headline + at least one chip before typing begins.
+  // Hold on the empty state so the viewer reads the headline + chips.
   await page.waitForTimeout(1500);
 
   const composer = page.getByPlaceholder(/Write to /);
+  // Stop button only exists during streaming — appears when the turn
+  // starts, detaches when it ends. Wait-for-attach-then-detach is the
+  // clean signal for "this turn just finished" without timing assumptions.
+  const stopBtn = page.getByRole("button", { name: /stop generating/i });
+
+  // ── Turn 1: vague intro, no date ──
   await composer.click();
-  // ~45ms/char — fast enough to keep the GIF under 15s, slow enough
-  // that the human eye reads it as typing, not pasting.
-  // pressSequentially is the non-deprecated replacement for .type().
-  await composer.pressSequentially(PROMPT, { delay: 45 });
-  // Brief pause before pressing Enter so the full prompt is readable.
-  await page.waitForTimeout(300);
+  await composer.pressSequentially(TURN_1, { delay: TYPE_DELAY_MS });
+  await page.waitForTimeout(280);
   await composer.press("Enter");
 
-  // Wait for the stream to land. The quote panel's "Estimated event total"
-  // is the last item rendered when compute_quote returns — using it as the
-  // "done" sentinel is more robust than a fixed timeout.
-  console.log("waiting for quote to land…");
-  await page
-    .getByText(/Estimated event total/i)
-    .waitFor({ timeout: 60_000 });
+  console.log("waiting for turn 1 reply…");
+  await stopBtn.waitFor({ timeout: 5_000 });
+  await stopBtn.waitFor({ state: "hidden", timeout: 30_000 });
+  // Beat between turns so the viewer reads the agent's clarifying question
+  // before we charge ahead.
+  await page.waitForTimeout(1700);
 
-  // Hold on the final state for a beat so the viewer can read the breakdown.
-  await page.waitForTimeout(1500);
+  // ── Turn 2: specifics, tools fire and the quote lands ──
+  await composer.click();
+  await composer.pressSequentially(TURN_2, { delay: TYPE_DELAY_MS });
+  await page.waitForTimeout(280);
+  await composer.press("Enter");
+
+  console.log("waiting for quote to land…");
+  await page.getByText(/Estimated event total/i).waitFor({ timeout: 60_000 });
+  // Hold on the breakdown so the viewer reads the figure.
+  await page.waitForTimeout(1700);
 
   await context.close();
   await browser.close();
