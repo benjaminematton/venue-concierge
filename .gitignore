@@ -37,6 +37,9 @@ yarn-error.log*
 # eval transcripts are per-run artifacts, not source
 evals/transcripts/*.json
 
+# intermediate video output from scripts/record-hero.ts
+scripts/video-tmp/
+
 # vercel
 .vercel
 
