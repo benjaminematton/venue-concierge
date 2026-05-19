@@ -42,7 +42,7 @@ npm run dev
 
 ```bash
 npm run typecheck      # tsc --noEmit
-npm test               # 58 vitest cases across pricing, chat policy, and tools
+npm test               # 67 vitest cases across pricing, chat policy, tools, and SSE parser
 npm run build          # next build
 npm run eval           # 6 agent evals at temperature 0 (needs ANTHROPIC_API_KEY)
 ```
