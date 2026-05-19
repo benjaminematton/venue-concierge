@@ -4,14 +4,16 @@ import type {
   ToolResultBlockParam,
   TextBlockParam,
 } from "@anthropic-ai/sdk/resources/messages";
-import type { VenueListing, PublicVenueListing } from "@/lib/pricing/types";
-import type {
-  ChatStreamEvent,
-  ChatStopReason,
-  QuoteBreakdownDto,
-} from "@/types/chat";
+import { stripVoice, type VenueListing } from "@/lib/pricing/types";
+import type { ChatStreamEvent, ChatStopReason } from "@/types/chat";
 import { buildSystemPrompt } from "./system-prompt";
-import { isToolName, runTool, summarizeArgs, TOOL_DEFS } from "./tools";
+import {
+  isToolName,
+  runTool,
+  summarizeArgs,
+  TOOL_DEFS,
+  type ComputeQuoteResult,
+} from "./tools";
 
 const MODEL = "claude-sonnet-4-6";
 const MAX_TOKENS = 1024;
@@ -23,34 +25,47 @@ interface RunArgs {
   // 0.2 in production; the eval runner passes 0 for determinism.
   temperature?: number;
   client?: Anthropic;
+  // Aborts the upstream Anthropic stream when the HTTP client disconnects.
+  // Without this we'd keep iterating (and paying for tokens) after the
+  // browser tab is closed.
+  signal?: AbortSignal;
 }
 
 // The tool loop. Yields ChatStreamEvent values; the HTTP route serialises
 // each to SSE. Errors that escape the loop propagate to the caller — the
 // route wraps the iteration in try/catch and emits a terminal `error`
 // event before closing the connection.
+//
+// Deferred: check_availability results are not currently forwarded as a
+// structured event. If the UI ever needs to render alternate-date chips
+// outside the agent's prose, add an `availability_update` ChatStreamEvent
+// here mirroring the `quote_update` pattern.
 export async function* runAgent(args: RunArgs): AsyncGenerator<ChatStreamEvent> {
-  const { venue, temperature = 0.2 } = args;
+  const { venue, temperature = 0.2, signal } = args;
   const client = args.client ?? new Anthropic();
 
   // Conversation history mutates each iteration: we append the model's
   // assistant turn, then a user turn containing tool_result blocks.
   const conversation: MessageParam[] = [...args.messages];
   const system: TextBlockParam[] = buildSystemPrompt(venue);
-  const publicVenue: PublicVenueListing = stripVoice(venue);
+  const publicVenue = stripVoice(venue);
 
   for (let iter = 0; iter < MAX_ITERATIONS; iter++) {
+    if (signal?.aborted) return;
     const messageId = randomId();
     yield { kind: "message_start", messageId };
 
-    const stream = client.messages.stream({
-      model: MODEL,
-      max_tokens: MAX_TOKENS,
-      temperature,
-      system,
-      tools: TOOL_DEFS,
-      messages: conversation,
-    });
+    const stream = client.messages.stream(
+      {
+        model: MODEL,
+        max_tokens: MAX_TOKENS,
+        temperature,
+        system,
+        tools: TOOL_DEFS,
+        messages: conversation,
+      },
+      { signal },
+    );
 
     // Forward text deltas as they arrive. Tool-use blocks are surfaced
     // after the message completes, so the pill carries fully-assembled
@@ -115,36 +130,38 @@ export async function* runAgent(args: RunArgs): AsyncGenerator<ChatStreamEvent> 
       };
 
       if (result.ok && block.name === "compute_quote") {
-        const data = result.data as QuoteBreakdownDto & {
-          packageId: string;
-          spaceId: string | null;
-        };
-        const input = block.input as {
-          dateISO?: string;
-          guests?: number;
-        };
+        const data = result.data as ComputeQuoteResult;
         yield {
           kind: "quote_update",
           toolCallId: block.id,
           venueId: venue.id,
           packageId: data.packageId,
-          dateISO: input.dateISO ?? "",
-          guests: input.guests ?? 0,
-          breakdown: {
-            subtotal: data.subtotal,
-            deposit: data.deposit,
-            depositSemantics: data.depositSemantics,
-            feeLines: data.feeLines,
-            dueAtBooking: data.dueAtBooking,
-            estimatedEventTotal: data.estimatedEventTotal,
-          },
+          dateISO: data.input.dateISO,
+          guests: data.input.guests,
+          breakdown: data.breakdown,
         };
       }
 
+      // Send only the payload (data or error) to the model — `is_error`
+      // already conveys success/failure, so the {ok, ...} envelope is
+      // redundant tokens. compute_quote also drops the `input` echo since
+      // the model already has it from its own tool_use block.
+      const toolPayload = result.ok
+        ? block.name === "compute_quote"
+          ? (() => {
+              const d = result.data as ComputeQuoteResult;
+              return {
+                breakdown: d.breakdown,
+                packageId: d.packageId,
+                spaceId: d.spaceId,
+              };
+            })()
+          : result.data
+        : result.error;
       toolResultBlocks.push({
         type: "tool_result",
         tool_use_id: block.id,
-        content: JSON.stringify(result),
+        content: JSON.stringify(toolPayload),
         is_error: !result.ok,
       });
     }
@@ -165,12 +182,6 @@ export async function* runAgent(args: RunArgs): AsyncGenerator<ChatStreamEvent> 
     kind: "error",
     message: `Agent did not converge after ${MAX_ITERATIONS} tool iterations.`,
   };
-}
-
-function stripVoice(v: VenueListing): PublicVenueListing {
-  const { voice: _voice, ...rest } = v;
-  void _voice;
-  return rest;
 }
 
 function randomId(): string {
