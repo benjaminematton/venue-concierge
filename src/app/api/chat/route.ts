@@ -43,9 +43,13 @@ export async function POST(req: NextRequest) {
   }
   const parsed = REQ_SCHEMA.safeParse(body);
   if (!parsed.success) {
-    return new Response(`Invalid body: ${parsed.error.message}`, {
-      status: 400,
+    // Surface a fixed string to the client; the detailed Zod error lands in
+    // server logs only. Verbose error responses are exactly the kind of
+    // thing a security scanner flags in prod.
+    console.error("api/chat invalid body", {
+      issues: parsed.error.issues,
     });
+    return new Response("Invalid request body.", { status: 400 });
   }
 
   const { venueId, messages } = parsed.data;
@@ -89,6 +93,10 @@ export async function POST(req: NextRequest) {
         // client gets a clean signal instead of a hung stream.
         if (e instanceof Error && e.name === "AbortError") return;
         const message = e instanceof Error ? e.message : "Stream failed.";
+        console.error("api/chat stream failure", {
+          venueId,
+          error: message,
+        });
         try {
           controller.enqueue(sseFrame({ kind: "error", message }));
         } catch {
