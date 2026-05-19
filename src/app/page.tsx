@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { ChatPanel } from "@/components/ChatPanel";
 import { QuotePanel } from "@/components/QuotePanel";
 import { computeBreakdown } from "@/lib/pricing/venuePricing";
 import { VENUES, listVenueSummaries } from "@/lib/venues";
+import type { ChatMessage } from "@/types/chat";
 
 const VENUE_SUMMARIES = listVenueSummaries();
 
@@ -14,8 +16,45 @@ const DATE = "2026-06-15";
 const TIME = "19:00";
 const GUESTS = 25;
 
+// Seeded transcript that exercises every visual: customer message, assistant
+// reply with two tool-call pills, follow-up assistant text. Replaces itself
+// with live agent output once /api/chat lands.
+const SEEDED_MESSAGES: ChatMessage[] = [
+  {
+    id: "seed-1",
+    role: "user",
+    text: "Hi! Looking to host a 25-person rehearsal dinner on June 15 at 7pm. Any chance the back room is open?",
+  },
+  {
+    id: "seed-2",
+    role: "assistant",
+    text: "Hey! Great timing — Monday June 15 at 7pm is open for the back room. Quick estimate based on a weekday F&B minimum, with the booking fee:",
+    toolCalls: [
+      {
+        id: "tc-1",
+        name: "check_availability",
+        status: "ok",
+        argsSummary: "2026-06-15, 19:00",
+      },
+      {
+        id: "tc-2",
+        name: "compute_quote",
+        status: "ok",
+        argsSummary: "quail-buyout × 25",
+      },
+    ],
+  },
+  {
+    id: "seed-3",
+    role: "assistant",
+    text: "The $300 reservation deposit credits back to your tab at the venue, so you're really just out the $35 booking fee plus service. Want me to hold the date?",
+  },
+];
+
 export default function Home() {
   const [venueId, setVenueId] = useState(VENUES[0].id);
+  const [messages, setMessages] = useState<ChatMessage[]>(SEEDED_MESSAGES);
+
   const venue = VENUES.find((v) => v.id === venueId)!;
   const pkg = venue.packages[0];
 
@@ -32,6 +71,20 @@ export default function Home() {
         : null,
     [venue, pkg],
   );
+
+  function handleSwitchVenue(nextId: string) {
+    setVenueId(nextId);
+    setMessages([]);
+  }
+
+  function handleSubmit(text: string) {
+    // Until the agent route is wired, every submission just lands as a user
+    // message so the composer + scroll behavior can be sanity-checked.
+    setMessages((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), role: "user", text },
+    ]);
+  }
 
   return (
     <div className="flex flex-1 flex-col font-sans">
@@ -52,11 +105,11 @@ export default function Home() {
       </header>
 
       <main className="mx-auto grid w-full max-w-6xl flex-1 grid-cols-1 gap-6 px-6 py-6 md:grid-cols-[1fr_24rem]">
-        <div className="rounded-2xl border border-dashed border-zinc-200 bg-white p-6 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
-          Chat will live here. Right now this page is mounted with a hardcoded
-          selection so the quote breakdown can be styled and verified against
-          real venue data before the agent is wired up.
-        </div>
+        <ChatPanel
+          messages={messages}
+          venueName={venue.name}
+          onSubmit={handleSubmit}
+        />
         <aside>
           <QuotePanel
             venue={venue}
@@ -65,7 +118,7 @@ export default function Home() {
             selectedPackageId={pkg?.id ?? null}
             date={DATE}
             guests={GUESTS}
-            onSwitchVenue={setVenueId}
+            onSwitchVenue={handleSwitchVenue}
           />
         </aside>
       </main>
