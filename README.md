@@ -9,7 +9,7 @@
 
 ## What's interesting
 
-- **Per-venue agent identity.** The concierge represents one venue, not a neutral helper across many. Each venue ships with a `voice.tone` descriptor and 2-3 hand-written `(customer, venue)` exchanges in [`data/venues.json`](data/venues.json); those examples are inserted into the cached prefix of the system prompt via [`src/lib/agent/system-prompt.ts`](src/lib/agent/system-prompt.ts). Same agent, three different voices.
+- **Per-venue agent identity.** The concierge represents one venue, not a neutral helper across many. Each venue ships with a `voice.tone` descriptor and 2-3 hand-written `(customer, venue)` exchanges in [`data/venues.voice.json`](data/venues.voice.json) (server-only) layered on top of the public catalog in [`data/venues.public.json`](data/venues.public.json); the voice file is imported only by [`src/lib/venues.server.ts`](src/lib/venues.server.ts) — marked `server-only` — so few-shot prose never enters the client bundle. Examples are inserted into the cached prefix of the system prompt via [`src/lib/agent/system-prompt.ts`](src/lib/agent/system-prompt.ts). Same agent, three different voices.
 - **Claude tool-use loop with SSE streaming** in Next.js App Router ([`src/lib/agent/stream.ts`](src/lib/agent/stream.ts) + [`src/app/api/chat/route.ts`](src/app/api/chat/route.ts)). Tool calls surface in the UI as inline `→ tool_name(args) ✓` pills while the model is running. The route forwards `req.signal` to the Anthropic stream so closing the browser tab cancels the upstream request instead of paying for tokens nobody will read.
 - **Production pricing math** lifted verbatim from VaBene. Two pricing models (FlatFee, FbMinimum), day-of-week + time-window overrides, split fees that apply at booking vs reconciliation. [24 vitest cases](src/lib/pricing/pricing.test.ts) cover the override paths, the midnight-wrapping time window, the DST boundary, and the FlatFee vs FbMinimum tab-credit difference.
 - **Agent evals, not just vibes.** [6 cases](evals/cases.ts) assert on observable behavior at `temperature: 0` — tool call counts, ordering, argument values — never on phrasing. Clarifies when vague, refuses to invent prices, recovers from a `UNKNOWN_PACKAGE` tool error without retrying the bad ID, surfaces alternate dates when a date is blocked.
@@ -60,7 +60,7 @@ npm run eval           # 6 agent evals at temperature 0 (needs ANTHROPIC_API_KEY
 
 ## What's seeded
 
-Three fictional venues in [`data/venues.json`](data/venues.json), parsed through [`src/lib/pricing/venueSchema.ts`](src/lib/pricing/venueSchema.ts) at module load so a malformed seed fails boot rather than the first request.
+Three fictional venues split across [`data/venues.public.json`](data/venues.public.json) (client-safe catalog) and [`data/venues.voice.json`](data/venues.voice.json) (server-only voice prose). Both are parsed through [`src/lib/pricing/venueSchema.ts`](src/lib/pricing/venueSchema.ts) at module load, with a cross-check that every public venue has a voice entry — a malformed seed fails boot rather than the first request.
 
 | Venue                | Pricing model     | Voice                                   |
 | -------------------- | ----------------- | --------------------------------------- |
