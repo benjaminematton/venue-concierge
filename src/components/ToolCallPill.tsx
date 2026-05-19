@@ -7,35 +7,34 @@ interface ToolCallPillProps {
   toolCall: ToolCallSummary;
 }
 
-// Editorial sidenote, not a chat pill. A small caps tracked-out label —
-// "called: check_availability" — followed by the args in mono. Status
-// shifts a marginal swatch on the left edge: running pulses faint,
-// ok is set in ink, error in vermillion.
+// Inline mono annotation: → tool_name(args) status-glyph.
+// Status drives color only: running pulses faint, ok stays ink-soft,
+// error switches to the accent (which doubles for error in this palette).
 export function ToolCallPill({ toolCall }: ToolCallPillProps) {
   const { name, status, argsSummary } = toolCall;
   return (
     <span
       className={cn(
-        "inline-flex items-baseline gap-2 border-l py-0.5 pl-2.5 text-[10px] uppercase tracking-[0.18em]",
-        status === "error" && "border-error text-error",
-        status === "ok" && "border-ink text-ink-soft",
-        status === "running" && "animate-pulse border-rule-strong text-ink-soft",
+        "inline-flex items-baseline gap-1.5 font-mono text-[11px] tabular-nums",
+        status === "error" && "text-error",
+        status === "ok" && "text-ink-soft",
+        status === "running" && "animate-pulse text-ink-faint",
       )}
     >
-      <span>called</span>
-      <span className="font-mono normal-case tracking-normal text-ink">
-        {name}
+      <span aria-hidden className="text-ink-faint">
+        →
       </span>
+      <span className="text-ink">{name}</span>
       {argsSummary && (
         <span
-          className="max-w-[16rem] truncate font-mono normal-case tracking-normal text-ink-faint"
+          className="max-w-[18rem] truncate text-ink-faint"
           title={argsSummary}
         >
           ({argsSummary})
         </span>
       )}
-      <span aria-hidden className="font-mono">
-        {status === "ok" ? "·" : status === "error" ? "✕" : "…"}
+      <span aria-hidden>
+        {status === "ok" ? "✓" : status === "error" ? "✕" : "…"}
       </span>
     </span>
   );

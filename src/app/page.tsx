@@ -18,51 +18,41 @@ export default function Home() {
   return (
     <div className="flex flex-1 flex-col">
       <header className="border-b border-rule">
-        <div className="mx-auto flex w-full max-w-6xl items-baseline justify-between px-8 py-6">
-          <div className="flex items-baseline gap-4">
-            {/* Wordmark. Display-serif italic with a fine ornament,
-                no boxy logo — the type IS the mark. */}
-            <span className="font-display text-2xl font-medium italic leading-none tracking-tight text-ink">
-              Concierge
-            </span>
-            <span aria-hidden className="text-rule-strong">
-              ·
-            </span>
-            <span className="font-sans text-[11px] uppercase tracking-[0.22em] text-ink-soft">
-              A private dining guide
-            </span>
-          </div>
+        <div className="mx-auto flex w-full max-w-6xl items-baseline justify-between px-8 py-5">
+          <span className="font-display text-[20px] font-medium leading-none tracking-tight text-ink">
+            Concierge
+          </span>
           <a
             href="https://github.com/benjaminematton/venue-concierge"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-sans text-[11px] uppercase tracking-[0.22em] text-ink-soft transition hover:text-accent"
+            className="font-sans text-[12px] text-ink-soft transition hover:text-accent"
           >
-            View source
+            View source ↗
           </a>
         </div>
       </header>
 
       {error && (
-        <div className="border-b border-error/40 bg-error-soft px-8 py-3 text-sm">
+        <div className="border-b border-error/30 bg-error-soft px-8 py-2.5 text-[13px]">
           <div className="mx-auto flex w-full max-w-6xl items-center gap-3 text-error">
-            <span aria-hidden className="font-mono text-[10px] uppercase">
+            <span aria-hidden className="font-mono text-[11px]">
               ✕
             </span>
-            <span className="flex-1 italic">{error}</span>
+            <span className="flex-1">{error}</span>
             <button
               type="button"
               onClick={clearError}
               aria-label="Dismiss error"
-              className="font-sans text-[10px] uppercase tracking-[0.22em] text-error transition hover:text-ink"
+              className="font-sans text-[12px] text-error transition hover:text-ink"
             >
-              dismiss
+              Dismiss
             </button>
           </div>
         </div>
       )}
 
-      <main className="mx-auto grid w-full max-w-6xl flex-1 grid-cols-1 gap-10 px-8 py-10 md:grid-cols-[1fr_20rem]">
+      <main className="mx-auto grid w-full max-w-6xl flex-1 grid-cols-1 gap-12 px-8 py-12 md:grid-cols-[1fr_22rem]">
         <ChatPanel
           messages={messages}
           venueName={venue.name}
@@ -85,11 +75,13 @@ export default function Home() {
       </main>
 
       <footer className="border-t border-rule">
-        <div className="mx-auto flex w-full max-w-6xl items-baseline justify-between px-8 py-5 font-sans text-[11px] uppercase tracking-[0.22em] text-ink-faint">
-          <span>Extracted from VaBene · An event-planning marketplace</span>
-          <span className="font-mono normal-case tracking-normal text-ink-faint">
-            v0.1
+        <div className="mx-auto flex w-full max-w-6xl items-baseline justify-between px-8 py-4 font-sans text-[12px] text-ink-faint">
+          <span>
+            Extracted from{" "}
+            <span className="text-ink-soft">VaBene</span>, an event-planning
+            marketplace.
           </span>
+          <span className="font-mono text-[11px]">venue-concierge.vercel.app</span>
         </div>
       </footer>
     </div>

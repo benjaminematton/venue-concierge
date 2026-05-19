@@ -20,7 +20,7 @@ function feeLabel(line: ResolvedFeeLine): string {
 }
 
 const DATE_FORMAT = new Intl.DateTimeFormat("en-US", {
-  month: "long",
+  month: "short",
   day: "numeric",
   year: "numeric",
 });
@@ -34,8 +34,8 @@ function feeKey(line: ResolvedFeeLine, i: number): string {
   return `${line.appliesAt}-${i}-${line.label}`;
 }
 
-// Receipt slip aesthetic — hairline rules, serif headlines, mono numerals,
-// vermillion accent reserved for the number the customer commits to today.
+// Receipt-style breakdown. The single oxblood accent sits on "Due at
+// booking" — every other figure is ink. No decorative labels.
 export function PriceBreakdown({
   breakdown,
   packageLabel,
@@ -50,26 +50,21 @@ export function PriceBreakdown({
   const isFbMinimum = breakdown.depositSemantics === "AppliedToTab";
 
   return (
-    <div className="border-y border-rule-strong py-6 text-ink">
-      <header className="mb-5">
-        <div className="font-sans text-[10px] uppercase tracking-[0.28em] text-ink-faint">
-          Estimated quote
-        </div>
-        <h2 className="mt-1 font-display text-xl italic leading-tight tracking-tight text-ink">
+    <div className="border-t border-rule-strong pt-5 text-ink">
+      <header className="mb-4">
+        <h3 className="font-display text-[16px] font-medium leading-tight tracking-tight text-ink">
           {packageLabel}
-        </h2>
-        <div className="mt-1.5 font-sans text-[11px] uppercase tracking-[0.18em] text-ink-soft">
+        </h3>
+        <div className="mt-1 font-sans text-[12px] text-ink-soft">
           <span>{venueName}</span>
-          <span aria-hidden className="mx-2 text-ink-faint">
+          <span aria-hidden className="mx-1.5 text-ink-faint">
             ·
           </span>
-          <span className="font-mono normal-case tracking-normal text-ink-soft">
-            {formatLocalDate(date)}
-          </span>
-          <span aria-hidden className="mx-2 text-ink-faint">
+          <span className="font-mono tabular-nums">{formatLocalDate(date)}</span>
+          <span aria-hidden className="mx-1.5 text-ink-faint">
             ·
           </span>
-          <span className="font-mono normal-case tracking-normal text-ink-soft">
+          <span className="font-mono tabular-nums">
             {guests} {guests === 1 ? "guest" : "guests"}
           </span>
         </div>
@@ -79,7 +74,6 @@ export function PriceBreakdown({
         <Row
           label={isFbMinimum ? "Food & beverage minimum" : "Package fee"}
           value={usd(breakdown.subtotal)}
-          strong
         />
         {bookingFees.map((line, i) => (
           <Row
@@ -93,18 +87,17 @@ export function PriceBreakdown({
 
       <Divider />
 
-      {/* Due-at-booking is the only number set in vermillion. The whole
-          design's accent budget lives here — every other figure stays ink. */}
+      {/* The one number set in accent. */}
       <div className="flex items-baseline justify-between">
-        <dt className="font-display text-[15px] italic text-ink">
+        <dt className="font-sans text-[14px] font-medium text-ink">
           Due at booking
         </dt>
-        <dd className="font-mono text-lg font-medium tabular-nums text-accent">
+        <dd className="font-mono text-[17px] font-medium tabular-nums text-accent">
           {usd(breakdown.dueAtBooking)}
         </dd>
       </div>
       {isFbMinimum && (
-        <p className="mt-2 max-w-prose font-sans text-[11px] italic leading-snug text-ink-soft">
+        <p className="mt-1.5 max-w-prose font-sans text-[12px] leading-snug text-ink-soft">
           Reservation deposit of {usd(breakdown.deposit)} is credited to your
           tab at the venue.
         </p>
@@ -113,7 +106,7 @@ export function PriceBreakdown({
       {reconcileFees.length > 0 && (
         <>
           <Divider />
-          <div className="mb-2 font-sans text-[10px] uppercase tracking-[0.28em] text-ink-faint">
+          <div className="mb-2 font-sans text-[12px] font-medium text-ink-soft">
             At the event
           </div>
           <dl className="space-y-1.5 text-[13px]">
@@ -132,15 +125,15 @@ export function PriceBreakdown({
       <Divider />
 
       <div className="flex items-baseline justify-between">
-        <dt className="font-display text-[15px] italic text-ink">
+        <dt className="font-sans text-[14px] font-medium text-ink">
           Estimated event total
         </dt>
-        <dd className="font-mono text-lg font-medium tabular-nums text-ink">
+        <dd className="font-mono text-[17px] font-medium tabular-nums text-ink">
           {usd(breakdown.estimatedEventTotal)}
         </dd>
       </div>
 
-      <p className="mt-5 font-sans text-[11px] italic leading-snug text-ink-faint">
+      <p className="mt-4 font-sans text-[12px] leading-snug text-ink-faint">
         Estimate based on current selection. Final total may shift with actual
         spend and guest count.
       </p>
@@ -151,30 +144,20 @@ export function PriceBreakdown({
 function Row({
   label,
   value,
-  strong = false,
   faint = false,
 }: {
   label: string;
   value: string;
-  strong?: boolean;
   faint?: boolean;
 }) {
   return (
     <div className="flex items-baseline justify-between">
-      <dt
-        className={
-          faint
-            ? "font-sans text-ink-soft"
-            : strong
-              ? "font-display text-[15px] italic text-ink"
-              : "font-sans text-ink"
-        }
-      >
+      <dt className={faint ? "font-sans text-ink-soft" : "font-sans text-ink"}>
         {label}
       </dt>
       <dd
         className={`font-mono tabular-nums ${
-          faint ? "text-ink-soft" : strong ? "text-base font-medium text-ink" : "text-ink"
+          faint ? "text-ink-soft" : "text-ink"
         }`}
       >
         {value}

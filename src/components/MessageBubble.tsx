@@ -12,10 +12,9 @@ interface MessageBubbleProps {
   isStreamingTurn?: boolean;
 }
 
-// Correspondence treatment: no bubble fills. Each message reads like a
-// line of dialogue in a play — italic display-serif speaker label,
-// then the text in serif body. Customer turns are right-aligned so the
-// rhythm reads as a back-and-forth without losing legibility.
+// Correspondence treatment: no bubble fills. Speaker label in regular
+// Fraunces at a small size, set off by color. Customer messages
+// right-align so the rhythm reads as a back-and-forth.
 export function MessageBubble({
   message,
   venueName,
@@ -33,17 +32,13 @@ export function MessageBubble({
         isVenue ? "items-start text-left" : "items-end text-right",
       )}
     >
-      <div
-        className={cn(
-          "font-display text-[11px] uppercase tracking-[0.24em] text-ink-faint",
-        )}
-      >
-        <span className="italic">{speaker}</span>
+      <div className="font-sans text-[12px] font-medium text-ink-soft">
+        {speaker}
       </div>
       {(message.text || showPlaceholder) && (
         <div className="max-w-[36rem] font-serif text-[15px] leading-[1.55] text-ink">
           {message.text || (
-            <span className="font-sans text-ink-faint">
+            <span className="text-ink-faint">
               <span className="inline-block animate-pulse">·</span>
               <span
                 className="inline-block animate-pulse"
@@ -64,7 +59,7 @@ export function MessageBubble({
       {toolCalls.length > 0 && (
         <div
           className={cn(
-            "flex flex-wrap gap-1.5",
+            "flex flex-wrap gap-x-3 gap-y-1",
             isVenue ? "justify-start" : "justify-end",
           )}
         >

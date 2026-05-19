@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { CornerDownLeft, Square } from "lucide-react";
+import { ArrowUpRight, Square } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
 import { canSubmit, keyIntent, turnStatus } from "./ChatPanel.logic";
 import type { ChatMessage } from "@/types/chat";
@@ -20,8 +20,6 @@ interface ChatPanelProps {
 
 const TEXTAREA_MAX_PX = 128;
 const STICK_THRESHOLD_PX = 64;
-// Single source for composer button labels — feeds both aria-label and
-// title so copy can't drift between the two.
 const STOP_LABEL = "Stop generating";
 const SEND_LABEL = "Send message";
 
@@ -123,32 +121,25 @@ export function ChatPanel({
         onSubmit={handleFormSubmit}
         className="mt-8 flex items-end gap-4 border-t border-rule pt-4"
       >
-        <div className="flex-1">
-          <label
-            htmlFor="composer"
-            className="block font-sans text-[10px] uppercase tracking-[0.28em] text-ink-faint"
-          >
-            Reply
-          </label>
-          <textarea
-            id="composer"
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            rows={1}
-            placeholder={`Write to ${venueName}…`}
-            disabled={disabled}
-            className="mt-1.5 w-full resize-none bg-transparent font-serif text-[15px] leading-[1.55] text-ink placeholder:italic placeholder:text-ink-faint focus:outline-none disabled:opacity-50"
-          />
-        </div>
+        <textarea
+          id="composer"
+          ref={textareaRef}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          rows={1}
+          placeholder={`Write to ${venueName}…`}
+          disabled={disabled}
+          aria-label={`Message ${venueName}`}
+          className="focus-quiet flex-1 resize-none bg-transparent font-serif text-[15px] leading-[1.55] text-ink placeholder:text-ink-faint focus:outline-none disabled:opacity-50"
+        />
         {isStreaming && onStop ? (
           <button
             type="button"
             onClick={onStop}
             aria-label={STOP_LABEL}
             title={STOP_LABEL}
-            className="group flex shrink-0 items-baseline gap-2 self-end pb-2 font-sans text-[10px] uppercase tracking-[0.28em] text-error transition hover:text-ink"
+            className="group flex shrink-0 items-center gap-1.5 self-end pb-1 font-sans text-[13px] text-error transition hover:text-ink"
           >
             <span>Stop</span>
             <Square
@@ -162,10 +153,10 @@ export function ChatPanel({
             disabled={!canSend}
             aria-label={SEND_LABEL}
             title={SEND_LABEL}
-            className="group flex shrink-0 items-baseline gap-2 self-end pb-2 font-sans text-[10px] uppercase tracking-[0.28em] text-ink-soft transition hover:text-accent disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:text-ink-soft"
+            className="group flex shrink-0 items-center gap-1.5 self-end pb-1 font-sans text-[13px] font-medium text-ink-soft transition hover:text-accent disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:text-ink-soft"
           >
             <span>Send</span>
-            <CornerDownLeft className="size-3.5" aria-hidden />
+            <ArrowUpRight className="size-3.5" aria-hidden />
           </button>
         )}
       </form>
@@ -186,34 +177,31 @@ function EmptyState({
 }) {
   return (
     <div className="flex h-full flex-col justify-center">
-      <div className="rise rise-1 font-sans text-[10px] uppercase tracking-[0.28em] text-ink-faint">
-        Opening note
-      </div>
-      <p className="rise rise-2 mt-3 max-w-[38ch] font-display text-3xl italic leading-[1.15] text-ink">
+      <h2 className="rise rise-1 max-w-[36ch] font-display text-[28px] font-medium leading-[1.2] tracking-tight text-ink">
         Tell {venueName} about your event.
-      </p>
-      <p className="rise rise-3 mt-3 max-w-[44ch] font-serif text-[15px] italic leading-relaxed text-ink-soft">
+      </h2>
+      <p className="rise rise-2 mt-3 max-w-[44ch] font-serif text-[15px] leading-relaxed text-ink-soft">
         A date, a head count, the kind of evening you&apos;re thinking. The
         right side composes the bill as we talk.
       </p>
       {suggestedPrompts.length > 0 && (
-        <ul className="mt-8 max-w-[42rem] divide-y divide-rule border-y border-rule">
+        <ul className="mt-8 max-w-[42rem] space-y-1">
           {suggestedPrompts.map((p, i) => (
-            <li key={p} className={`rise rise-${Math.min(i + 4, 5)}`}>
+            <li key={p} className={`rise rise-${Math.min(i + 3, 5)}`}>
               <button
                 type="button"
                 onClick={() => onPick(p)}
                 disabled={disabled}
-                className="group flex w-full items-baseline gap-3 py-3 text-left transition disabled:opacity-50"
+                className="group flex w-full items-baseline gap-2 rounded-md py-2 text-left transition hover:bg-paper-deep disabled:opacity-50"
               >
+                <span className="font-serif text-[15px] leading-snug text-ink-soft transition group-hover:text-ink">
+                  {p}
+                </span>
                 <span
                   aria-hidden
-                  className="font-mono text-[11px] text-ink-faint transition group-hover:text-accent"
+                  className="ml-auto pr-1 font-sans text-[12px] text-ink-faint opacity-0 transition group-hover:text-accent group-hover:opacity-100"
                 >
-                  ▸
-                </span>
-                <span className="font-serif text-[15px] italic leading-snug text-ink-soft transition group-hover:text-ink">
-                  {p}
+                  Send →
                 </span>
               </button>
             </li>

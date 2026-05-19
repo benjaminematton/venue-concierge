@@ -55,19 +55,16 @@ export function QuotePanel({
 
 function QuoteSkeleton({ venueName }: { venueName: string }) {
   return (
-    <div className="border-y border-rule-strong py-6 text-ink">
-      <div className="font-sans text-[10px] uppercase tracking-[0.28em] text-ink-faint">
-        Estimated quote
-      </div>
-      <h2 className="mt-1 font-display text-xl italic leading-tight tracking-tight text-ink-soft">
-        Pending
-      </h2>
-      <p className="mt-3 max-w-[24ch] font-sans text-[12px] italic leading-relaxed text-ink-soft">
-        Tell {venueName} about your event in the chat. Once we have the date,
-        guest count, and a package, the figure assembles here.
+    <div className="border-t border-rule-strong pt-5 text-ink">
+      <h3 className="font-display text-[16px] font-medium leading-tight tracking-tight text-ink-soft">
+        Awaiting details
+      </h3>
+      <p className="mt-2 max-w-[28ch] font-sans text-[13px] leading-relaxed text-ink-soft">
+        Once {venueName} has a date, head count, and a package, the breakdown
+        appears here.
       </p>
       <div className="my-5 h-px bg-rule" aria-hidden />
-      <dl className="space-y-1.5 font-mono text-[12px] tabular-nums text-ink-faint">
+      <dl className="space-y-1.5 font-sans text-[13px] text-ink-faint">
         <Placeholder label="Subtotal" />
         <Placeholder label="Due at booking" />
         <Placeholder label="Estimated total" />
@@ -79,8 +76,8 @@ function QuoteSkeleton({ venueName }: { venueName: string }) {
 function Placeholder({ label }: { label: string }) {
   return (
     <div className="flex items-baseline justify-between">
-      <dt className="font-sans">{label}</dt>
-      <dd className="text-ink-faint">—</dd>
+      <dt>{label}</dt>
+      <dd className="font-mono text-ink-faint">—</dd>
     </div>
   );
 }

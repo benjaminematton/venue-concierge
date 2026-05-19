@@ -9,10 +9,10 @@ interface VenueSwitcherProps {
   onChange: (id: string) => void;
 }
 
-// Editorial selector: no chunky dropdown chrome. A tracked-out "SPEAKING
-// WITH" label sits above a large italic display-serif venue name; the
-// native <select> overlays everything and is fully transparent. Click
-// the name and the OS picker opens.
+// The chevron + thin underline give the affordance; the native select
+// sits transparent on top so the OS picker handles the open. No
+// "SPEAKING WITH" label — the venue name as the largest type in the
+// right column is enough context.
 export function VenueSwitcher({
   venues,
   selectedId,
@@ -20,17 +20,14 @@ export function VenueSwitcher({
 }: VenueSwitcherProps) {
   const selected = venues.find((v) => v.id === selectedId);
   return (
-    <div className="relative">
-      <div className="font-sans text-[10px] uppercase tracking-[0.28em] text-ink-faint">
-        Speaking with
-      </div>
-      <div className="relative mt-2 flex items-end gap-2 border-b border-rule pb-2">
-        <span className="font-display text-[26px] font-medium italic leading-[1.05] tracking-tight text-ink">
+    <div>
+      <div className="relative flex items-center gap-2 border-b border-rule pb-2">
+        <span className="font-display text-[22px] font-medium leading-[1.1] tracking-tight text-ink">
           {selected?.name ?? "Select venue"}
         </span>
         <ChevronDown
           aria-hidden
-          className="mb-1 size-4 shrink-0 text-ink-faint transition group-focus-within:text-accent"
+          className="size-4 shrink-0 text-ink-faint"
         />
         <select
           value={selectedId}
@@ -46,7 +43,7 @@ export function VenueSwitcher({
         </select>
       </div>
       {selected && (
-        <p className="mt-2 font-sans text-xs italic text-ink-soft">
+        <p className="mt-2 font-sans text-[13px] text-ink-soft">
           {selected.tagline}
         </p>
       )}
