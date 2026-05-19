@@ -1,64 +1,67 @@
-import Image from "next/image";
+"use client";
+
+import { useMemo, useState } from "react";
+import { QuotePanel } from "@/components/QuotePanel";
+import { computeBreakdown } from "@/lib/pricing/venuePricing";
+import { VENUES, listVenueSummaries } from "@/lib/venues";
 
 export default function Home() {
+  const summaries = useMemo(() => listVenueSummaries(), []);
+  const [venueId, setVenueId] = useState(VENUES[0].id);
+  const venue = VENUES.find((v) => v.id === venueId) ?? VENUES[0];
+  const pkg = venue.packages[0];
+
+  // Hardcoded selection used to prove the QuotePanel renders against real
+  // venue data. The chat will drive these once the agent is wired.
+  const date = "2026-06-15";
+  const guests = 25;
+
+  const breakdown = useMemo(() => {
+    if (!pkg) return null;
+    return computeBreakdown(venue, pkg, {
+      date,
+      time: "19:00",
+      guests,
+      packageId: pkg.id,
+      spaceId: pkg.appliesToSpaceIds[0] ?? null,
+    });
+  }, [venue, pkg]);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="flex flex-1 flex-col font-sans">
+      <header className="border-b border-zinc-200 bg-white/80 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/80">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="size-7 rounded-lg bg-zinc-900 dark:bg-zinc-50" />
+            <div>
+              <h1 className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+                Concierge
+              </h1>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                AI quoting assistant
+              </p>
+            </div>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </header>
+
+      <main className="mx-auto grid w-full max-w-6xl flex-1 grid-cols-1 gap-6 px-6 py-6 md:grid-cols-[1fr_24rem]">
+        <div className="rounded-2xl border border-dashed border-zinc-200 bg-white p-6 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
+          Chat will live here. Right now this page is mounted with a hardcoded
+          selection so the quote breakdown can be styled and verified against
+          real venue data before the agent is wired up.
         </div>
+        <aside>
+          <QuotePanel
+            venue={venue}
+            venues={summaries}
+            breakdown={breakdown}
+            selectedPackageId={pkg?.id ?? null}
+            date={date}
+            guests={guests}
+            onSwitchVenue={setVenueId}
+          />
+        </aside>
       </main>
     </div>
   );
