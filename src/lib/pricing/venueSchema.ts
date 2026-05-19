@@ -1,18 +1,25 @@
 import { z } from "zod";
-import type { VenueListing } from "./types";
+import type { PublicVenueListing, VenueVoice } from "./types";
 
-// Runtime schema for the seed JSON. Kept narrow on purpose — we only
+// Runtime schemas for the seed JSON. Kept narrow on purpose — we only
 // validate the shape the math and the agent rely on. Strict object mode
 // catches the most common authoring mistake (typo'd field name) without
 // blowing up on photos/reviews additions.
 //
-// The exported `VENUE_SCHEMA` is the one source of truth at the data
-// boundary; consumers should `parse` once at module load and treat the
-// result as readonly. A parse failure here means the seed file is wrong
-// and we want to fail boot, not the first user request.
+// The catalog is split across two files at the data boundary so the
+// client bundle never references voice prose:
+//   data/venues.public.json — PublicVenueListing[] (no voice)
+//   data/venues.voice.json  — Record<venueId, VenueVoice>
+// Consumers should `parse` once at module load and treat the result as
+// readonly. A parse failure here means the seed file is wrong and we
+// want to fail boot, not the first user request.
 
 const dayShortSchema = z.enum(["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]);
 
+// endHour allows 24 as a sentinel for "midnight at the end of the day" on
+// non-wrapping windows; startHour stays clock-bound. matchOverride treats
+// startHour > endHour as a wrapping window, so a window like 22..02 is
+// expressed as { startHour: 22, endHour: 2 } rather than { 22, 26 }.
 const timeWindowSchema = z.object({
   startHour: z.number().int().min(0).max(23),
   endHour: z.number().int().min(0).max(24),
@@ -102,7 +109,7 @@ const voiceSchema = z.object({
     .min(1),
 });
 
-const venueSchema = z.object({
+const publicVenueSchema = z.object({
   id: z.string().min(1),
   slug: z.string().min(1),
   name: z.string().min(1),
@@ -136,7 +143,6 @@ const venueSchema = z.object({
   effectiveHouseRules: z.array(z.string()),
   cancellationPolicy: z.object({ tiers: z.array(cancellationTierSchema) }),
   feesConfig: z.object({ lines: z.array(feeLineSchema) }),
-  voice: voiceSchema,
   reviews: z
     .array(
       z.object({
@@ -149,13 +155,14 @@ const venueSchema = z.object({
     .optional(),
 });
 
-export const VENUE_SCHEMA = z.array(venueSchema);
+export const PUBLIC_VENUES_SCHEMA = z.array(publicVenueSchema);
+export const VOICE_MAP_SCHEMA = z.record(z.string().min(1), voiceSchema);
 
 // Belt-and-suspenders cross-field check: every package must reference a
 // space that exists on its venue, and the inferred shape must satisfy the
-// hand-written VenueListing interface.
-export function parseVenues(input: unknown): VenueListing[] {
-  const venues = VENUE_SCHEMA.parse(input);
+// hand-written PublicVenueListing interface.
+export function parsePublicVenues(input: unknown): PublicVenueListing[] {
+  const venues = PUBLIC_VENUES_SCHEMA.parse(input);
   for (const v of venues) {
     const spaceIds = new Set(v.spaces.map((s) => s.id));
     for (const pkg of v.packages) {
@@ -168,5 +175,9 @@ export function parseVenues(input: unknown): VenueListing[] {
       }
     }
   }
-  return venues satisfies VenueListing[];
+  return venues satisfies PublicVenueListing[];
+}
+
+export function parseVoiceMap(input: unknown): Record<string, VenueVoice> {
+  return VOICE_MAP_SCHEMA.parse(input);
 }
