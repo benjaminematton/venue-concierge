@@ -307,8 +307,8 @@ describe("summarizeArgs", () => {
 
   it("uses '?' placeholders for missing or wrong-type fields", () => {
     expect(summarizeArgs("check_availability", {})).toBe("?, ? guests");
-    // compute_quote: missing packageId becomes "?"; missing guests drops the
-    // " × N" suffix entirely (trim() collapses the trailing space).
+    // compute_quote: missing packageId becomes "?"; missing guests drops
+    // the " × N" suffix entirely.
     expect(summarizeArgs("compute_quote", {})).toBe("?");
     expect(summarizeArgs("compute_quote", { guests: 25 })).toBe("? × 25");
     expect(summarizeArgs("compute_quote", { packageId: "pkg-main" })).toBe(

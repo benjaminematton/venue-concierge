@@ -311,8 +311,8 @@ export function summarizeArgs(name: ToolName, rawInput: unknown): string {
   }
   if (name === "compute_quote") {
     const pkg = typeof input.packageId === "string" ? input.packageId : "?";
-    const guests = typeof input.guests === "number" ? `× ${input.guests}` : "";
-    return `${pkg} ${guests}`.trim();
+    const guests = typeof input.guests === "number" ? `× ${input.guests}` : null;
+    return guests ? `${pkg} ${guests}` : pkg;
   }
   return "";
 }
