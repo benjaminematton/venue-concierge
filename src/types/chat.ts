@@ -51,7 +51,16 @@ export type ChatStreamEvent =
   | { kind: "text_delta"; messageId: string; delta: string }
   | { kind: "message_start"; messageId: string }
   | { kind: "message_end"; messageId: string; stopReason: ChatStopReason }
-  | { kind: "tool_use_start"; messageId: string; toolCall: ToolCallSummary }
+  | {
+      kind: "tool_use_start";
+      messageId: string;
+      toolCall: ToolCallSummary;
+      // The full input the model produced for this tool. Wire-carried so
+      // the eval runner can assert on values that don't survive the
+      // argsSummary display string (date, time, exact packageId). The UI
+      // ignores it; the eval reads it.
+      input: unknown;
+    }
   | {
       kind: "tool_use_end";
       messageId: string;

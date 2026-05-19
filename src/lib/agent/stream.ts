@@ -99,6 +99,7 @@ export async function* runAgent(args: RunArgs): AsyncGenerator<ChatStreamEvent> 
           status: "running",
           argsSummary,
         },
+        input: block.input,
       };
 
       if (!isToolName(block.name)) {
