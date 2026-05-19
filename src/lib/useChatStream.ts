@@ -151,14 +151,21 @@ export function useChatStream(venueId: string): UseChatStream {
   // streams can run in parallel across venues; the user just sees the one
   // they're looking at.
   const controllersRef = useRef<Map<string, AbortController>>(new Map());
+  // Synchronous in-flight set. `state.isStreaming` only updates after the
+  // dispatch commits, so two synchronous calls to `send` (rapid Enter +
+  // click, or a stray re-render) would both see isStreaming=false and both
+  // fire. This ref flips immediately and gates the second call cleanly.
+  const inFlightRef = useRef<Set<string>>(new Set());
 
   // Cancel any in-flight streams on unmount only — switching venues no longer
   // aborts; the other venue's stream simply keeps writing into its bucket.
   useEffect(() => {
     const controllers = controllersRef.current;
+    const inFlight = inFlightRef.current;
     return () => {
       for (const c of controllers.values()) c.abort();
       controllers.clear();
+      inFlight.clear();
     };
   }, []);
 
@@ -168,7 +175,8 @@ export function useChatStream(venueId: string): UseChatStream {
   // history we POST always reflects current messages. No ref mirror needed.
   const send = useCallback(
     (text: string) => {
-      if (state.isStreaming) return;
+      if (state.isStreaming || inFlightRef.current.has(venueId)) return;
+      inFlightRef.current.add(venueId);
 
       const userMessage: ChatMessage = {
         id: crypto.randomUUID(),
@@ -182,6 +190,7 @@ export function useChatStream(venueId: string): UseChatStream {
         history: toLlmMessages([...state.messages, userMessage]),
         dispatch,
         controllersRef,
+        inFlightRef,
       });
     },
     [venueId, state.messages, state.isStreaming],
@@ -201,6 +210,7 @@ interface PostArgs {
   history: { role: "user" | "assistant"; content: string }[];
   dispatch: React.Dispatch<Action>;
   controllersRef: React.RefObject<Map<string, AbortController>>;
+  inFlightRef: React.RefObject<Set<string>>;
 }
 
 async function postAndStream({
@@ -208,6 +218,7 @@ async function postAndStream({
   history,
   dispatch,
   controllersRef,
+  inFlightRef,
 }: PostArgs) {
   // Cancel any prior in-flight stream for *this* venue. Other venues are
   // untouched.
@@ -271,6 +282,7 @@ async function postAndStream({
     if (controllersRef.current.get(venueId) === controller) {
       controllersRef.current.delete(venueId);
     }
+    inFlightRef.current.delete(venueId);
   }
 }
 
