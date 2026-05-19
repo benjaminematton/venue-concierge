@@ -10,6 +10,11 @@
 
 export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6; // Sun..Sat (matches JS Date.getDay())
 
+// Short weekday labels used in VenueListing.weeklyHours. Kept as a literal
+// union (not a free string) so a typo in seed JSON fails to typecheck rather
+// than silently falling through weekdayInTz's lookup table.
+export type DayShort = "Sun" | "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat";
+
 export interface TimeWindow {
   // 24-hour clock; matches the picked date's local hour in venue.timezone.
   // Inclusive start, exclusive end. Wraps midnight if startHour > endHour.
@@ -94,6 +99,11 @@ export interface VenueVoice {
   examples: VoiceExample[]; // 2-3 hand-written exchanges
 }
 
+// Client-safe projection of a venue. Same shape minus `voice`, which is
+// server-only prompt material. Use this type anywhere a client component
+// or non-prompt code touches a venue.
+export type PublicVenueListing = Omit<VenueListing, "voice">;
+
 export interface VenueListing {
   id: string;
   slug: string;
@@ -105,7 +115,7 @@ export interface VenueListing {
   addressLine1: string;
   city: string;
   timezone: string; // IANA
-  weeklyHours: { day: string; open: string; close: string }[];
+  weeklyHours: { day: DayShort; open: string; close: string }[];
   photos: PhotoTile[];
   spaces: Space[];
   packages: PackageOption[];
@@ -124,6 +134,16 @@ export interface VenueListing {
   feesConfig: { lines: FeeLineItem[] };
   voice: VenueVoice;
   reviews?: { author: string; date: string; quote: string; rating: number }[];
+}
+
+// Client-safe projection of a venue: no voice prose, no pricing internals.
+// Use this in components that render the venue catalog so the prompt-only
+// fields aren't pulled into the client bundle.
+export interface VenueSummary {
+  id: string;
+  name: string;
+  tagline: string;
+  neighborhood: string;
 }
 
 export interface CalculatorState {

@@ -162,6 +162,32 @@ describe("resolvePricing", () => {
     });
   });
 
+  it("prefers a time-window override over a plain DOW override regardless of array order", () => {
+    // A bare Friday override appears BEFORE the more specific Friday-evening
+    // override in the array. resolvePricing must still pick the specific one.
+    // Locks in the bugfix where Array.find shadowed the time-window tier.
+    const friFlat: PricingOverride = {
+      dayOfWeek: 5,
+      minimumSpend: 4000,
+      reservationAmount: 500,
+    };
+    const friEve: PricingOverride = {
+      dayOfWeek: 5,
+      timeWindow: { startHour: 19, endHour: 23 },
+      minimumSpend: 4500,
+      reservationAmount: 600,
+    };
+    const r = resolvePricing(
+      fbMinPkg([friFlat, friEve]),
+      "2026-07-17",
+      25,
+      TZ,
+      20,
+    );
+    expect(r.subtotal).toBe(4500);
+    expect(r.deposit).toBe(600);
+  });
+
   it("FbMinimum override with a midnight-wrapping time window", () => {
     // 22:00..02:00 — a late-night override that wraps past midnight
     const lateNight: PricingOverride = {

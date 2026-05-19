@@ -13,6 +13,7 @@ import type {
   FeeLineItem,
   PackageOption,
   PricingOverride,
+  PublicVenueListing,
   VenueListing,
 } from "./types";
 
@@ -72,6 +73,20 @@ export function matchOverride(
   return hour >= startHour || hour < endHour;
 }
 
+// Resolve the active override for a given DOW+hour. Time-window overrides
+// rank above plain DOW overrides so JSON ordering can't shadow the more
+// specific tier; within the same tier, the first match wins.
+export function pickOverride(
+  overrides: PricingOverride[] | undefined,
+  dow: DayOfWeek,
+  hour: number | undefined,
+): PricingOverride | undefined {
+  if (!overrides) return undefined;
+  const matches = overrides.filter((o) => matchOverride(o, dow, hour));
+  if (matches.length === 0) return undefined;
+  return matches.find((o) => o.timeWindow) ?? matches[0];
+}
+
 export interface PricingResult {
   subtotal: number;
   deposit: number;
@@ -98,10 +113,10 @@ export function resolvePricing(
     };
   }
   const dow = weekdayInTz(dateISO, tz);
-  let matched: PricingOverride | undefined;
-  if (dow !== undefined && p.overrides) {
-    matched = p.overrides.find((o) => matchOverride(o, dow, hour));
-  }
+  // Prefer time-window overrides over plain DOW overrides so JSON ordering
+  // can't accidentally shadow a more specific tier. Within the same
+  // specificity, first match wins.
+  const matched = dow === undefined ? undefined : pickOverride(p.overrides, dow, hour);
   return {
     subtotal: matched ? matched.minimumSpend : p.minimumSpend,
     deposit: matched ? matched.reservationAmount : p.reservationAmount,
@@ -137,7 +152,7 @@ export interface PriceBreakdown {
 }
 
 export function computeBreakdown(
-  venue: VenueListing,
+  venue: PublicVenueListing,
   pkg: PackageOption,
   state: CalculatorState,
 ): PriceBreakdown {
@@ -180,7 +195,7 @@ export function formatRatePct(rate: number): string {
 // a real number, never "from $X".
 export function packageBaseLine(
   pkg: PackageOption,
-  venue: VenueListing,
+  venue: PublicVenueListing,
 ): string {
   const today = new Date().toISOString().slice(0, 10);
   const r = resolvePricing(pkg, today, pkg.maxGuests, venue.timezone);

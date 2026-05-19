@@ -44,15 +44,15 @@
           "reservationAmount": 300,
           "depositAppliesToTab": true,
           "overrides": [
-            { "dayOfWeek": 5, "minimumSpend": 4000, "reservationAmount": 500 },
-            { "dayOfWeek": 6, "minimumSpend": 4000, "reservationAmount": 500 },
-            { "dayOfWeek": 0, "minimumSpend": 3500, "reservationAmount": 400 },
             {
               "dayOfWeek": 5,
               "timeWindow": { "startHour": 19, "endHour": 23 },
               "minimumSpend": 4500,
               "reservationAmount": 500
-            }
+            },
+            { "dayOfWeek": 5, "minimumSpend": 4000, "reservationAmount": 500 },
+            { "dayOfWeek": 6, "minimumSpend": 4000, "reservationAmount": 500 },
+            { "dayOfWeek": 0, "minimumSpend": 3500, "reservationAmount": 400 }
           ]
         }
       }
