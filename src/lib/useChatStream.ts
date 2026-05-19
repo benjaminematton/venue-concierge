@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef } from "react";
 import type {
   ChatMessage,
   ChatStreamEvent,
@@ -9,7 +9,6 @@ import type {
 } from "@/types/chat";
 
 export interface ActiveQuote {
-  venueId: string;
   packageId: string;
   toolCallId: string;
   dateISO: string;
@@ -23,14 +22,123 @@ interface UseChatStream {
   isStreaming: boolean;
   error: string | null;
   send: (text: string) => void;
-  reset: () => void;
 }
 
-// Each turn is sent stateless on the LLM history: we POST the prior
-// user/assistant text exchange plus the new user message, never the
-// underlying tool_use / tool_result blocks. The assistant's text from the
-// prior turn carries enough context forward ("I checked, June 15 is open")
-// for the next reply, and the API stays simple — no session store.
+// Per-venue conversation bucket. Every venue gets its own; switching venues
+// just re-projects the active bucket, it doesn't tear anything down. Streams
+// in flight when the user switches keep writing into the venue they belong
+// to (the action's venueId is the routing key, not React state).
+interface VenueStream {
+  messages: ChatMessage[];
+  quote: ActiveQuote | null;
+  isStreaming: boolean;
+  error: string | null;
+}
+
+const EMPTY: VenueStream = {
+  messages: [],
+  quote: null,
+  isStreaming: false,
+  error: null,
+};
+
+type State = Record<string, VenueStream>;
+
+// All actions carry venueId. The reducer is pure — no closures over React
+// state, no race conditions on switch, no abort coordination needed.
+type Action =
+  | { type: "send"; venueId: string; userMessage: ChatMessage }
+  | { type: "message_start"; venueId: string; messageId: string }
+  | { type: "text_delta"; venueId: string; messageId: string; delta: string }
+  | {
+      type: "tool_use_start";
+      venueId: string;
+      messageId: string;
+      toolCall: ToolCallSummary;
+    }
+  | {
+      type: "tool_use_end";
+      venueId: string;
+      messageId: string;
+      toolCallId: string;
+      status: "ok" | "error";
+    }
+  | { type: "quote_update"; venueId: string; quote: ActiveQuote }
+  | { type: "stream_end"; venueId: string }
+  | { type: "error"; venueId: string; message: string };
+
+function reducer(state: State, action: Action): State {
+  const cur = state[action.venueId] ?? EMPTY;
+  const put = (next: Partial<VenueStream>): State => ({
+    ...state,
+    [action.venueId]: { ...cur, ...next },
+  });
+
+  switch (action.type) {
+    case "send":
+      return put({
+        messages: [...cur.messages, action.userMessage],
+        isStreaming: true,
+        error: null,
+      });
+
+    case "message_start":
+      return put({
+        messages: [
+          ...cur.messages,
+          { id: action.messageId, role: "assistant", text: "" },
+        ],
+      });
+
+    case "text_delta":
+      return put({
+        messages: cur.messages.map((m) =>
+          m.id === action.messageId
+            ? { ...m, text: m.text + action.delta }
+            : m,
+        ),
+      });
+
+    case "tool_use_start":
+      return put({
+        messages: cur.messages.map((m) => {
+          if (m.id !== action.messageId) return m;
+          return {
+            ...m,
+            toolCalls: [...(m.toolCalls ?? []), action.toolCall],
+          };
+        }),
+      });
+
+    case "tool_use_end":
+      return put({
+        messages: cur.messages.map((m) => {
+          if (m.id !== action.messageId) return m;
+          return {
+            ...m,
+            toolCalls: (m.toolCalls ?? []).map((tc) =>
+              tc.id === action.toolCallId
+                ? { ...tc, status: action.status }
+                : tc,
+            ),
+          };
+        }),
+      });
+
+    case "quote_update":
+      return put({ quote: action.quote });
+
+    case "stream_end":
+      return put({ isStreaming: false });
+
+    case "error":
+      return put({ error: action.message, isStreaming: false });
+  }
+}
+
+// History sent to the LLM is just the prior user/assistant text turns; tool
+// blocks stay server-side. Empty assistant messages (placeholder before any
+// tokens land) are filtered so they don't poison the next request.
 function toLlmMessages(uiMessages: ChatMessage[]) {
   return uiMessages
     .filter((m) => m.text.length > 0)
@@ -38,84 +146,74 @@ function toLlmMessages(uiMessages: ChatMessage[]) {
 }
 
 export function useChatStream(venueId: string): UseChatStream {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [quote, setQuote] = useState<ActiveQuote | null>(null);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
+  const [streams, dispatch] = useReducer(reducer, {} as State);
+  // One AbortController per active venue stream. Lives in a ref so multiple
+  // streams can run in parallel across venues; the user just sees the one
+  // they're looking at.
+  const controllersRef = useRef<Map<string, AbortController>>(new Map());
 
-  const reset = useCallback(() => {
-    abortRef.current?.abort();
-    abortRef.current = null;
-    setMessages([]);
-    setQuote(null);
-    setIsStreaming(false);
-    setError(null);
+  // Cancel any in-flight streams on unmount only — switching venues no longer
+  // aborts; the other venue's stream simply keeps writing into its bucket.
+  useEffect(() => {
+    const controllers = controllersRef.current;
+    return () => {
+      for (const c of controllers.values()) c.abort();
+      controllers.clear();
+    };
   }, []);
 
-  // Reset on venue change so the new venue's voice gets a fresh transcript.
-  useEffect(() => {
-    reset();
-  }, [venueId, reset]);
+  const state = streams[venueId] ?? EMPTY;
 
-  // Cancel in-flight stream on unmount.
-  useEffect(() => () => abortRef.current?.abort(), []);
-
+  // Closure captures the latest committed `state` via the dep array, so the
+  // history we POST always reflects current messages. No ref mirror needed.
   const send = useCallback(
     (text: string) => {
-      if (isStreaming) return;
-      setError(null);
+      if (state.isStreaming) return;
 
       const userMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: "user",
         text,
       };
-      // Capture the prior history at send-time so the POST body sees the
-      // user turn we're about to append.
-      setMessages((prev) => {
-        const next = [...prev, userMessage];
-        void postAndStream({
-          venueId,
-          history: toLlmMessages(next),
-          setMessages,
-          setQuote,
-          setError,
-          setIsStreaming,
-          abortRef,
-        });
-        return next;
+      dispatch({ type: "send", venueId, userMessage });
+
+      void postAndStream({
+        venueId,
+        history: toLlmMessages([...state.messages, userMessage]),
+        dispatch,
+        controllersRef,
       });
     },
-    [venueId, isStreaming],
+    [venueId, state.messages, state.isStreaming],
   );
 
-  return { messages, quote, isStreaming, error, send, reset };
+  return {
+    messages: state.messages,
+    quote: state.quote,
+    isStreaming: state.isStreaming,
+    error: state.error,
+    send,
+  };
 }
 
 interface PostArgs {
   venueId: string;
   history: { role: "user" | "assistant"; content: string }[];
-  setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
-  setQuote: React.Dispatch<React.SetStateAction<ActiveQuote | null>>;
-  setError: React.Dispatch<React.SetStateAction<string | null>>;
-  setIsStreaming: React.Dispatch<React.SetStateAction<boolean>>;
-  abortRef: React.RefObject<AbortController | null>;
+  dispatch: React.Dispatch<Action>;
+  controllersRef: React.RefObject<Map<string, AbortController>>;
 }
 
 async function postAndStream({
   venueId,
   history,
-  setMessages,
-  setQuote,
-  setError,
-  setIsStreaming,
-  abortRef,
+  dispatch,
+  controllersRef,
 }: PostArgs) {
-  abortRef.current?.abort();
+  // Cancel any prior in-flight stream for *this* venue. Other venues are
+  // untouched.
+  controllersRef.current.get(venueId)?.abort();
   const controller = new AbortController();
-  abortRef.current = controller;
-  setIsStreaming(true);
+  controllersRef.current.set(venueId, controller);
 
   try {
     const res = await fetch("/api/chat", {
@@ -132,7 +230,6 @@ async function postAndStream({
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
-    let currentMessageId: string | null = null;
 
     // SSE frames are separated by a blank line. Each frame begins with
     // `data: <json>`; ignore other field names since our server only emits
@@ -150,89 +247,92 @@ async function postAndStream({
         if (!line) continue;
         const payload = line.slice(line.indexOf(":") + 1).trim();
         if (!payload) continue;
-        const event = JSON.parse(payload) as ChatStreamEvent;
-        currentMessageId = applyEvent(event, currentMessageId, {
-          setMessages,
-          setQuote,
-          setError,
-        });
+        // A malformed frame shouldn't kill the whole stream. Log and skip;
+        // the next valid frame will continue updating the UI.
+        let event: ChatStreamEvent;
+        try {
+          event = JSON.parse(payload) as ChatStreamEvent;
+        } catch (parseErr) {
+          console.warn("useChatStream: dropped malformed SSE frame", parseErr);
+          continue;
+        }
+        applyEvent(event, venueId, dispatch);
       }
     }
   } catch (e: unknown) {
     if (e instanceof DOMException && e.name === "AbortError") return;
-    setError(e instanceof Error ? e.message : String(e));
+    dispatch({
+      type: "error",
+      venueId,
+      message: e instanceof Error ? e.message : String(e),
+    });
   } finally {
-    setIsStreaming(false);
-    if (abortRef.current === controller) abortRef.current = null;
+    dispatch({ type: "stream_end", venueId });
+    if (controllersRef.current.get(venueId) === controller) {
+      controllersRef.current.delete(venueId);
+    }
   }
 }
 
 function applyEvent(
   event: ChatStreamEvent,
-  currentMessageId: string | null,
-  setters: Pick<PostArgs, "setMessages" | "setQuote" | "setError">,
-): string | null {
-  const { setMessages, setQuote, setError } = setters;
-
+  venueId: string,
+  dispatch: React.Dispatch<Action>,
+) {
   switch (event.kind) {
     case "message_start":
-      setMessages((prev) => [
-        ...prev,
-        { id: event.messageId, role: "assistant", text: "" },
-      ]);
-      return event.messageId;
+      dispatch({ type: "message_start", venueId, messageId: event.messageId });
+      return;
 
     case "text_delta":
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === event.messageId ? { ...m, text: m.text + event.delta } : m,
-        ),
-      );
-      return currentMessageId;
+      dispatch({
+        type: "text_delta",
+        venueId,
+        messageId: event.messageId,
+        delta: event.delta,
+      });
+      return;
 
     case "tool_use_start":
-      setMessages((prev) =>
-        prev.map((m) => {
-          if (m.id !== event.messageId) return m;
-          const toolCalls: ToolCallSummary[] = [
-            ...(m.toolCalls ?? []),
-            event.toolCall,
-          ];
-          return { ...m, toolCalls };
-        }),
-      );
-      return currentMessageId;
+      dispatch({
+        type: "tool_use_start",
+        venueId,
+        messageId: event.messageId,
+        toolCall: event.toolCall,
+      });
+      return;
 
     case "tool_use_end":
-      setMessages((prev) =>
-        prev.map((m) => {
-          if (m.id !== event.messageId) return m;
-          const toolCalls = (m.toolCalls ?? []).map((tc) =>
-            tc.id === event.toolCallId
-              ? { ...tc, status: event.status }
-              : tc,
-          );
-          return { ...m, toolCalls };
-        }),
-      );
-      return currentMessageId;
+      dispatch({
+        type: "tool_use_end",
+        venueId,
+        messageId: event.messageId,
+        toolCallId: event.toolCallId,
+        status: event.status,
+      });
+      return;
 
     case "quote_update":
-      setQuote({
-        venueId: event.venueId,
-        packageId: event.packageId,
-        toolCallId: event.toolCallId,
-        dateISO: event.dateISO,
-        guests: event.guests,
-        breakdown: event.breakdown,
+      dispatch({
+        type: "quote_update",
+        venueId,
+        quote: {
+          packageId: event.packageId,
+          toolCallId: event.toolCallId,
+          dateISO: event.dateISO,
+          guests: event.guests,
+          breakdown: event.breakdown,
+        },
       });
-      return currentMessageId;
+      return;
 
     case "message_end":
-      return null;
+      // Surfaced by the server; the per-message bookkeeping is handled by
+      // text/tool deltas. Nothing to do here today.
+      return;
 
     case "error":
-      setError(event.message);
-      return currentMessageId;
+      dispatch({ type: "error", venueId, message: event.message });
+      return;
   }
 }

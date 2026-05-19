@@ -14,11 +14,6 @@ export default function Home() {
   const venue = VENUES.find((v) => v.id === venueId) ?? VENUES[0];
   const { messages, quote, isStreaming, error, send } = useChatStream(venueId);
 
-  // Only surface the quote when it belongs to the active venue. The hook
-  // resets on venue change but this guard keeps a race from showing the
-  // wrong venue's numbers mid-switch.
-  const activeQuote = quote && quote.venueId === venueId ? quote : null;
-
   return (
     <div className="flex flex-1 flex-col font-sans">
       <header className="border-b border-zinc-200 bg-white/80 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/80">
@@ -57,10 +52,10 @@ export default function Home() {
           <QuotePanel
             venue={venue}
             venues={VENUE_SUMMARIES}
-            breakdown={activeQuote?.breakdown ?? null}
-            selectedPackageId={activeQuote?.packageId ?? null}
-            date={activeQuote?.dateISO ?? null}
-            guests={activeQuote?.guests ?? null}
+            breakdown={quote?.breakdown ?? null}
+            selectedPackageId={quote?.packageId ?? null}
+            date={quote?.dateISO ?? null}
+            guests={quote?.guests ?? null}
             onSwitchVenue={setVenueId}
           />
         </aside>
