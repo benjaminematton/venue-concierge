@@ -5,27 +5,33 @@ import { QuotePanel } from "@/components/QuotePanel";
 import { computeBreakdown } from "@/lib/pricing/venuePricing";
 import { VENUES, listVenueSummaries } from "@/lib/venues";
 
+const VENUE_SUMMARIES = listVenueSummaries();
+
+// Hardcoded selection used to prove the QuotePanel renders against real
+// venue data. The chat will drive these once the agent is wired — at that
+// point these become state and need to enter the useMemo deps below.
+const DATE = "2026-06-15";
+const TIME = "19:00";
+const GUESTS = 25;
+
 export default function Home() {
-  const summaries = useMemo(() => listVenueSummaries(), []);
   const [venueId, setVenueId] = useState(VENUES[0].id);
-  const venue = VENUES.find((v) => v.id === venueId) ?? VENUES[0];
+  const venue = VENUES.find((v) => v.id === venueId)!;
   const pkg = venue.packages[0];
 
-  // Hardcoded selection used to prove the QuotePanel renders against real
-  // venue data. The chat will drive these once the agent is wired.
-  const date = "2026-06-15";
-  const guests = 25;
-
-  const breakdown = useMemo(() => {
-    if (!pkg) return null;
-    return computeBreakdown(venue, pkg, {
-      date,
-      time: "19:00",
-      guests,
-      packageId: pkg.id,
-      spaceId: pkg.appliesToSpaceIds[0] ?? null,
-    });
-  }, [venue, pkg]);
+  const breakdown = useMemo(
+    () =>
+      pkg
+        ? computeBreakdown(venue, pkg, {
+            date: DATE,
+            time: TIME,
+            guests: GUESTS,
+            packageId: pkg.id,
+            spaceId: pkg.appliesToSpaceIds[0] ?? null,
+          })
+        : null,
+    [venue, pkg],
+  );
 
   return (
     <div className="flex flex-1 flex-col font-sans">
@@ -54,11 +60,11 @@ export default function Home() {
         <aside>
           <QuotePanel
             venue={venue}
-            venues={summaries}
+            venues={VENUE_SUMMARIES}
             breakdown={breakdown}
             selectedPackageId={pkg?.id ?? null}
-            date={date}
-            guests={guests}
+            date={DATE}
+            guests={GUESTS}
             onSwitchVenue={setVenueId}
           />
         </aside>
