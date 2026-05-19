@@ -5,7 +5,7 @@
 <!-- Replace with hero.gif once recorded. Spec: 8–12s, prompt → tool pills firing → quote animating in on the right. -->
 ![demo placeholder](./public/hero.gif)
 
-[Live demo](#) · [Pricing tests](src/lib/pricing/pricing.test.ts) · [Agent evals](evals/cases.ts)
+[Live demo](https://venue-concierge.vercel.app) · [Pricing tests](src/lib/pricing/pricing.test.ts) · [Agent evals](evals/cases.ts)
 
 ## What's interesting
 
