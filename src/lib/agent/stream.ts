@@ -17,7 +17,10 @@ import {
 
 const MODEL = "claude-sonnet-4-6";
 const MAX_TOKENS = 1024;
-const MAX_ITERATIONS = 6;
+// 8 lets a same-turn recovery (e.g. AMBIGUOUS_SPACE retry) sit comfortably
+// inside the cap while still killing a runaway loop. Anything past this is
+// almost certainly the model thrashing on a tool error.
+const MAX_ITERATIONS = 8;
 
 interface RunArgs {
   venue: VenueListing;
@@ -104,18 +107,24 @@ export async function* runAgent(args: RunArgs): AsyncGenerator<ChatStreamEvent> 
 
       if (!isToolName(block.name)) {
         // Defensive: the model named a tool we didn't register. Treat as a
-        // hard error rather than feeding garbage back.
+        // hard error rather than feeding garbage back. Shape matches
+        // ToolError so the model parses every error path the same way.
+        const unknownToolError = {
+          code: "INVALID_INPUT" as const,
+          message: `Tool "${block.name}" is not available.`,
+          suggested_action: `Use one of the registered tools: check_availability, compute_quote.`,
+        };
         yield {
           kind: "tool_use_end",
           messageId,
           toolCallId: block.id,
           status: "error",
-          errorMessage: `Unknown tool: ${block.name}`,
+          errorMessage: unknownToolError.message,
         };
         toolResultBlocks.push({
           type: "tool_result",
           tool_use_id: block.id,
-          content: `Tool "${block.name}" is not available.`,
+          content: JSON.stringify(unknownToolError),
           is_error: true,
         });
         continue;
@@ -179,6 +188,10 @@ export async function* runAgent(args: RunArgs): AsyncGenerator<ChatStreamEvent> 
 
   // Ran out of iterations. The agent kept calling tools without converging
   // on an answer; surface a controlled error rather than a silent halt.
+  console.error("agent did not converge", {
+    venueId: venue.id,
+    maxIterations: MAX_ITERATIONS,
+  });
   yield {
     kind: "error",
     message: `Agent did not converge after ${MAX_ITERATIONS} tool iterations.`,
