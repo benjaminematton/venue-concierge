@@ -6,7 +6,7 @@
 
 const PROMPTS: Record<string, string[]> = {
   "the-quail": [
-    "Hi! 25 people on Monday June 15, 2026 at 7pm — what's the back room look like?",
+    "Hi! 25 people on Tuesday June 16, 2026 at 7pm — what's the back room look like?",
     "How does your F&B minimum work on a Friday?",
     "Do you handle dietary restrictions for a group?",
   ],

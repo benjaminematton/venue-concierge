@@ -82,7 +82,7 @@ export const CASES: EvalCase[] = [
       {
         role: "user",
         content:
-          "Hi! 25 people on Monday June 15, 2026 at 7pm, looking to book the Private Back Room.",
+          "Hi! 25 people on Tuesday June 16, 2026 at 7pm, looking to book the Private Back Room.",
       },
     ],
     assert: (t) => {
@@ -94,8 +94,8 @@ export const CASES: EvalCase[] = [
 
       if (avail.length === 1) {
         const a = getInput<{ dateISO?: string; guests?: number }>(avail[0]);
-        if (a.dateISO !== "2026-06-15")
-          failures.push(`check_availability dateISO=${a.dateISO}, expected 2026-06-15`);
+        if (a.dateISO !== "2026-06-16")
+          failures.push(`check_availability dateISO=${a.dateISO}, expected 2026-06-16`);
         if (a.guests !== 25)
           failures.push(`check_availability guests=${a.guests}, expected 25`);
       }
@@ -108,8 +108,8 @@ export const CASES: EvalCase[] = [
         }>(quotes[0]);
         if (q.packageId !== "quail-buyout")
           failures.push(`compute_quote packageId=${q.packageId}, expected quail-buyout`);
-        if (q.dateISO !== "2026-06-15")
-          failures.push(`compute_quote dateISO=${q.dateISO}, expected 2026-06-15`);
+        if (q.dateISO !== "2026-06-16")
+          failures.push(`compute_quote dateISO=${q.dateISO}, expected 2026-06-16`);
         if (q.time !== "19:00")
           failures.push(`compute_quote time=${q.time}, expected 19:00`);
         if (q.guests !== 25)
@@ -140,7 +140,7 @@ export const CASES: EvalCase[] = [
       {
         role: "user",
         content:
-          "Hi — can we book 200 people for a private event on June 15, 2026 at 7pm?",
+          "Hi — can we book 200 people for a private event on June 16, 2026 at 7pm?",
       },
     ],
     assert: (t) => {
@@ -190,7 +190,7 @@ export const CASES: EvalCase[] = [
       {
         role: "user",
         content:
-          "Looking for a quote on the back room, 25 people, June 15, 2026 at 7pm.",
+          "Looking for a quote on the back room, 25 people, June 16, 2026 at 7pm.",
       },
       {
         role: "assistant",
@@ -202,7 +202,7 @@ export const CASES: EvalCase[] = [
             name: "compute_quote",
             input: {
               packageId: "nonexistent_pkg_99",
-              dateISO: "2026-06-15",
+              dateISO: "2026-06-16",
               time: "19:00",
               guests: 25,
             },
