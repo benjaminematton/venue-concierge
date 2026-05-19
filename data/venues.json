@@ -1,0 +1,313 @@
+[
+  {
+    "id": "the-quail",
+    "slug": "the-quail",
+    "name": "The Quail Wine Bar",
+    "tagline": "Natural wine, small plates, private back room",
+    "descriptor": "Wine bar with a 40-seat private back room",
+    "overview": "A neighborhood wine bar known for its natural wine list and seasonal small plates. The back room can be booked privately and seats up to 40 with a food and beverage minimum.",
+    "neighborhood": "Cobble Hill",
+    "addressLine1": "184 Court St",
+    "city": "Brooklyn",
+    "timezone": "America/New_York",
+    "weeklyHours": [
+      { "day": "Tue", "open": "17:00", "close": "00:00" },
+      { "day": "Wed", "open": "17:00", "close": "00:00" },
+      { "day": "Thu", "open": "17:00", "close": "00:00" },
+      { "day": "Fri", "open": "17:00", "close": "01:00" },
+      { "day": "Sat", "open": "16:00", "close": "01:00" },
+      { "day": "Sun", "open": "16:00", "close": "23:00" }
+    ],
+    "photos": [],
+    "spaces": [
+      {
+        "id": "quail-back-room",
+        "name": "Back Room",
+        "maxCapacity": 40,
+        "minGuests": 12,
+        "facilities": ["Private entrance", "Adjustable lighting", "Bluetooth speakers"],
+        "musicPolicy": "Curated playlists or bring your own via aux"
+      }
+    ],
+    "packages": [
+      {
+        "id": "quail-buyout",
+        "label": "Private Back Room",
+        "blurb": "Full buyout of the back room with a dedicated server.",
+        "appliesToSpaceIds": ["quail-back-room"],
+        "maxGuests": 40,
+        "durationMinutes": 210,
+        "privacyMode": "Private",
+        "pricing": {
+          "kind": "FbMinimum",
+          "minimumSpend": 2500,
+          "reservationAmount": 300,
+          "depositAppliesToTab": true,
+          "overrides": [
+            { "dayOfWeek": 5, "minimumSpend": 4000, "reservationAmount": 500 },
+            { "dayOfWeek": 6, "minimumSpend": 4000, "reservationAmount": 500 },
+            { "dayOfWeek": 0, "minimumSpend": 3500, "reservationAmount": 400 },
+            {
+              "dayOfWeek": 5,
+              "timeWindow": { "startHour": 19, "endHour": 23 },
+              "minimumSpend": 4500,
+              "reservationAmount": 500
+            }
+          ]
+        }
+      }
+    ],
+    "effectiveHouseRules": [
+      "Outside food not permitted (cake is fine, no fee).",
+      "Music must stay below 75 dB after 10 pm per the building.",
+      "Final guest count due 48 hours before the event."
+    ],
+    "cancellationPolicy": {
+      "tiers": [
+        { "hoursBeforeEvent": 168, "refundFraction": 1.0 },
+        { "hoursBeforeEvent": 72, "refundFraction": 0.5 },
+        { "hoursBeforeEvent": 24, "refundFraction": 0.0 }
+      ]
+    },
+    "feesConfig": {
+      "lines": [
+        {
+          "label": "Booking fee",
+          "rate": 0,
+          "basis": "FixedAmount",
+          "fixedAmount": 35,
+          "appliesAt": "Booking"
+        },
+        {
+          "label": "Service charge",
+          "rate": 0.22,
+          "basis": "Subtotal",
+          "appliesAt": "Reconciliation"
+        }
+      ]
+    },
+    "voice": {
+      "tone": "Warm, casual, neighborhood-spot energy. Speaks like a friendly bartender who knows the regulars. First-person plural ('we'). Light contractions. Comfortable saying 'totally' and 'honestly'.",
+      "examples": [
+        {
+          "customer": "Hi! Thinking about a birthday dinner for around 20 people. What does that look like?",
+          "venue": "Hey! For 20 people the back room is a great fit. We've got a $2,500 food and beverage minimum weeknights and $4,000 Friday/Saturday. Got a date in mind so I can check?"
+        },
+        {
+          "customer": "What if we want to bring a cake?",
+          "venue": "Totally fine, no cakeage fee from us. Just give the kitchen a heads-up the day before so we can have plates and forks ready when you want them."
+        },
+        {
+          "customer": "Is there parking?",
+          "venue": "Street parking around us usually opens up after 7. There's a paid lot on Smith if you want guaranteed spots, happy to text the exact address closer to the date."
+        }
+      ]
+    }
+  },
+  {
+    "id": "upper-floor",
+    "slug": "upper-floor",
+    "name": "Upper Floor Rooftop",
+    "tagline": "Modern rooftop, full buyouts only",
+    "descriptor": "Indoor-outdoor rooftop space with 120-person capacity",
+    "overview": "A modern event venue on the top floor of a converted warehouse, with a covered indoor lounge and an open-air rooftop. Buyout only. Built for cocktail receptions, milestone birthdays, and brand events.",
+    "neighborhood": "Industry City",
+    "addressLine1": "220 36th St, 7th Fl",
+    "city": "Brooklyn",
+    "timezone": "America/New_York",
+    "weeklyHours": [
+      { "day": "Wed", "open": "16:00", "close": "01:00" },
+      { "day": "Thu", "open": "16:00", "close": "01:00" },
+      { "day": "Fri", "open": "16:00", "close": "01:00" },
+      { "day": "Sat", "open": "12:00", "close": "01:00" },
+      { "day": "Sun", "open": "12:00", "close": "23:00" }
+    ],
+    "photos": [],
+    "spaces": [
+      {
+        "id": "upper-floor-main",
+        "name": "Full Floor",
+        "maxCapacity": 120,
+        "minGuests": 40,
+        "facilities": [
+          "Indoor + outdoor",
+          "Built-in bar",
+          "75-inch screen",
+          "Two wireless mics",
+          "House sound system"
+        ],
+        "musicPolicy": "Amplified music permitted until 11 pm; DJ-friendly with house sound system"
+      }
+    ],
+    "packages": [
+      {
+        "id": "upper-floor-buyout",
+        "label": "Full Floor Buyout",
+        "blurb": "Exclusive use of the rooftop and indoor lounge.",
+        "appliesToSpaceIds": ["upper-floor-main"],
+        "maxGuests": 120,
+        "durationMinutes": 300,
+        "privacyMode": "Private",
+        "pricing": {
+          "kind": "FlatFee",
+          "pricePerGroup": 3000,
+          "pricePerGuest": 35,
+          "depositAmount": 1000
+        }
+      }
+    ],
+    "effectiveHouseRules": [
+      "Amplified music must end by 11 pm per the building.",
+      "Outside catering allowed with a $500 fee and prior approval.",
+      "No open flames; battery candles only."
+    ],
+    "cancellationPolicy": {
+      "tiers": [
+        { "hoursBeforeEvent": 720, "refundFraction": 1.0 },
+        { "hoursBeforeEvent": 336, "refundFraction": 0.75 },
+        { "hoursBeforeEvent": 168, "refundFraction": 0.5 },
+        { "hoursBeforeEvent": 72, "refundFraction": 0.0 }
+      ]
+    },
+    "feesConfig": {
+      "lines": [
+        {
+          "label": "Administrative fee",
+          "rate": 0.05,
+          "basis": "Subtotal",
+          "appliesAt": "Booking"
+        },
+        {
+          "label": "Service",
+          "rate": 0.18,
+          "basis": "Subtotal",
+          "appliesAt": "Reconciliation"
+        }
+      ]
+    },
+    "voice": {
+      "tone": "Clipped, modern, event-planner crisp. Speaks like a venue manager who runs a tight ship. Short sentences. Confirms specifics fast. Uses dashes and bullet-style replies. No filler.",
+      "examples": [
+        {
+          "customer": "Looking to book the rooftop for 60 people on October 12.",
+          "venue": "Confirmed: October 12 is open. Room hire is $3,000 plus $35/guest. $1,000 deposit, held at booking. 5-hour standard window. Want me to send a hold link?"
+        },
+        {
+          "customer": "What's your AV setup?",
+          "venue": "Two wireless mics, a 75-inch screen, HDMI + USB-C inputs. House Bluetooth speakers indoor and outdoor. Anything specific you need on top of that?"
+        },
+        {
+          "customer": "Can we bring our own DJ?",
+          "venue": "Yes. House sound runs off 1/4-inch or RCA, your DJ plugs in directly. Amplified music cuts at 11 pm per the building."
+        }
+      ]
+    }
+  },
+  {
+    "id": "maison-vert",
+    "slug": "maison-vert",
+    "name": "Maison Vert",
+    "tagline": "Modern French, two private dining rooms",
+    "descriptor": "Tasting-menu restaurant with private salon and cellar",
+    "overview": "A Michelin-recommended French restaurant with two private dining options: the Salon Privé for up to 28 guests, and the Cellar for up to 16. Both spaces are served the chef's seven-course tasting menu.",
+    "neighborhood": "West Village",
+    "addressLine1": "84 Bedford St",
+    "city": "New York",
+    "timezone": "America/New_York",
+    "weeklyHours": [
+      { "day": "Tue", "open": "17:00", "close": "23:00" },
+      { "day": "Wed", "open": "17:00", "close": "23:00" },
+      { "day": "Thu", "open": "17:00", "close": "23:00" },
+      { "day": "Fri", "open": "17:00", "close": "23:30" },
+      { "day": "Sat", "open": "17:00", "close": "23:30" }
+    ],
+    "photos": [],
+    "spaces": [
+      {
+        "id": "maison-salon",
+        "name": "Salon Privé",
+        "maxCapacity": 28,
+        "minGuests": 12,
+        "facilities": ["Dedicated sommelier", "Private restrooms", "Adjustable lighting"]
+      },
+      {
+        "id": "maison-cellar",
+        "name": "Cellar",
+        "maxCapacity": 16,
+        "minGuests": 8,
+        "facilities": ["Vaulted ceiling", "Private wine library", "Chef's table"]
+      }
+    ],
+    "packages": [
+      {
+        "id": "maison-salon-tasting",
+        "label": "Tasting Menu in the Salon",
+        "blurb": "Seven-course chef's tasting served in the Salon Privé.",
+        "appliesToSpaceIds": ["maison-salon"],
+        "maxGuests": 28,
+        "durationMinutes": 180,
+        "privacyMode": "Private",
+        "pricing": {
+          "kind": "FlatFee",
+          "pricePerGroup": 0,
+          "pricePerGuest": 185,
+          "depositAmount": 500
+        }
+      },
+      {
+        "id": "maison-cellar-tasting",
+        "label": "Tasting Menu in the Cellar",
+        "blurb": "Seven-course chef's tasting at the Chef's Table in the Cellar.",
+        "appliesToSpaceIds": ["maison-cellar"],
+        "maxGuests": 16,
+        "durationMinutes": 195,
+        "privacyMode": "Private",
+        "pricing": {
+          "kind": "FlatFee",
+          "pricePerGroup": 0,
+          "pricePerGuest": 225,
+          "depositAmount": 500
+        }
+      }
+    ],
+    "effectiveHouseRules": [
+      "All guests are served the chef's tasting menu; à la carte is not available for private events.",
+      "Dietary restrictions accommodated with at least 72 hours' notice.",
+      "Smart-casual attire; no athletic wear."
+    ],
+    "cancellationPolicy": {
+      "tiers": [
+        { "hoursBeforeEvent": 336, "refundFraction": 1.0 },
+        { "hoursBeforeEvent": 168, "refundFraction": 0.5 },
+        { "hoursBeforeEvent": 72, "refundFraction": 0.0 }
+      ]
+    },
+    "feesConfig": {
+      "lines": [
+        {
+          "label": "Service",
+          "rate": 0.2,
+          "basis": "Subtotal",
+          "appliesAt": "Reconciliation"
+        }
+      ]
+    },
+    "voice": {
+      "tone": "Formal, French-inflected, hospitality-old-school. Full sentences. 'It would be our pleasure.' Avoids contractions. Refers to staff as 'we' but maintains a measured distance. Never breezy.",
+      "examples": [
+        {
+          "customer": "Interested in booking the cellar for an anniversary dinner.",
+          "venue": "It would be our pleasure. The Cellar seats up to sixteen at our Chef's Table. May we know the date you are considering, and the number of guests you anticipate?"
+        },
+        {
+          "customer": "What is included with the tasting menu?",
+          "venue": "Our chef's tasting consists of seven courses, an amuse-bouche, and petits fours. Wine pairings are available at an additional charge. We will of course accommodate any dietary restrictions with seventy-two hours' notice."
+        },
+        {
+          "customer": "Can we tour the space?",
+          "venue": "Of course. We are open Tuesday through Saturday from five o'clock. Would Wednesday or Thursday afternoon, between three and five, suit your schedule for a viewing?"
+        }
+      ]
+    }
+  }
+]
