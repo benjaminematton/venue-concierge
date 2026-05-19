@@ -64,8 +64,9 @@ export const TOOL_DEFS: Tool[] = [
     name: "compute_quote",
     description:
       "Compute a binding price quote for a specific package, date, time, and " +
-      "guest count. Returns subtotal, fee lines, due-at-booking amount, and " +
-      "estimated event total. Never invent prices — always call this.",
+      "guest count. Returns subtotal, deposit, fee lines, due-at-booking " +
+      "amount, and estimated event total. Call check_availability first when " +
+      "the customer names a date. Never invent prices — always call this.",
     input_schema: {
       type: "object",
       properties: {
@@ -194,10 +195,20 @@ export function runCheckAvailability(
 
 // ─── Tool: compute_quote ────────────────────────────────────────────────────
 
+export interface ComputeQuoteResult {
+  breakdown: QuoteBreakdownDto;
+  // The validated input that produced this breakdown. Threaded through so
+  // downstream consumers don't have to re-narrow `block.input` at the
+  // boundary; the zod parse here is the single source of truth.
+  input: ComputeQuoteInput;
+  packageId: string;
+  spaceId: string;
+}
+
 export function runComputeQuote(
   venue: PublicVenueListing,
   rawInput: unknown,
-): ToolResult<QuoteBreakdownDto & { packageId: string; spaceId: string | null }> {
+): ToolResult<ComputeQuoteResult> {
   const parsed = COMPUTE_QUOTE_INPUT.safeParse(rawInput);
   if (!parsed.success) {
     return err(
@@ -226,25 +237,29 @@ export function runComputeQuote(
     );
   }
 
-  let resolvedSpaceId: string | null = spaceId ?? null;
-  if (resolvedSpaceId) {
-    if (!pkg.appliesToSpaceIds.includes(resolvedSpaceId)) {
+  let resolvedSpaceId: string;
+  if (spaceId) {
+    if (!pkg.appliesToSpaceIds.includes(spaceId)) {
       const allowed = pkg.appliesToSpaceIds
         .map((id) => venue.spaces.find((s) => s.id === id)?.name ?? id)
         .join(", ");
       return err(
         "UNKNOWN_SPACE",
-        `Space "${resolvedSpaceId}" is not bookable with the ${pkg.label} package.`,
+        `Space "${spaceId}" is not bookable with the ${pkg.label} package.`,
         `Use one of: ${allowed}.`,
       );
     }
+    resolvedSpaceId = spaceId;
   } else if (pkg.appliesToSpaceIds.length === 1) {
     resolvedSpaceId = pkg.appliesToSpaceIds[0];
   } else {
+    const allowedNames = pkg.appliesToSpaceIds
+      .map((id) => venue.spaces.find((s) => s.id === id)?.name ?? id)
+      .join(", ");
     return err(
-      "UNKNOWN_SPACE",
-      `The ${pkg.label} package can be hosted in multiple spaces; pick one.`,
-      `Ask the customer to pick: ${pkg.appliesToSpaceIds.join(", ")}.`,
+      "AMBIGUOUS_SPACE",
+      `The ${pkg.label} package can be hosted in multiple spaces; the customer must pick one.`,
+      `Ask the customer which they prefer: ${allowedNames}. Don't guess — confirm before re-calling compute_quote with a spaceId.`,
     );
   }
 
@@ -257,7 +272,8 @@ export function runComputeQuote(
   });
 
   return ok({
-    ...breakdown,
+    breakdown,
+    input: parsed.data,
     packageId: pkg.id,
     spaceId: resolvedSpaceId,
   });

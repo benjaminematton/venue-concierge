@@ -9,6 +9,7 @@
 export type ToolErrorCode =
   | "UNKNOWN_PACKAGE"
   | "UNKNOWN_SPACE"
+  | "AMBIGUOUS_SPACE"
   | "GUESTS_EXCEED_CAPACITY"
   | "INVALID_INPUT";
 
