@@ -8,16 +8,42 @@
 // below picks up .env.local if it exists.
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { join } from "node:path";
-import { runAgent } from "../src/lib/agent/stream";
-import { getVenueWithVoice } from "../src/lib/venues.server";
 import type { ChatStreamEvent } from "../src/types/chat";
-import {
-  CASES,
-  type EvalCase,
-  type EvalTranscript,
-  type ToolCallRecord,
-} from "./cases";
+import type { EvalCase, EvalTranscript, ToolCallRecord } from "./cases";
+
+// `server-only` throws unconditionally when loaded outside a Next.js bundle.
+// venues.server.ts imports it so a client module that grabs voice prose
+// fails the build; the eval runner is a Node script, not Next.js, so we
+// pre-populate the require cache with an empty exports object before the
+// dependency chain evaluates. Production behavior unchanged — only this
+// process sees the no-op.
+const __require = createRequire(import.meta.url);
+__require.cache[__require.resolve("server-only")] = {
+  // The fields Node actually inspects on a cached entry. The rest of
+  // NodeJS.Module is irrelevant for a hand-populated stub.
+  id: "server-only",
+  filename: "server-only",
+  loaded: true,
+  exports: {},
+  children: [],
+  paths: [],
+} as unknown as NodeJS.Module;
+
+// Dynamic imports inside main() (rather than top-level await) because tsx
+// transpiles this script to CJS — esbuild rejects top-level await in that
+// target. The shim above runs at module load; main() runs after, by which
+// point the require.cache stub is in place for venues.server's dependency
+// chain.
+type StreamModule = typeof import("../src/lib/agent/stream");
+type VenuesServerModule = typeof import("../src/lib/venues.server");
+type CasesModule = typeof import("./cases");
+// Definite-assignment assertions: main() populates these before any other
+// code reads them. TS can't prove that from control flow alone, hence `!`.
+let runAgent!: StreamModule["runAgent"];
+let getVenueWithVoice!: VenuesServerModule["getVenueWithVoice"];
+let CASES!: CasesModule["CASES"];
 
 // Pull .env.local into process.env. The Anthropic client is only
 // constructed inside runAgent (called from main below), so loading the
@@ -131,6 +157,10 @@ const DIM = (s: string) => `\x1b[2m${s}\x1b[0m`;
 const BOLD = (s: string) => `\x1b[1m${s}\x1b[0m`;
 
 async function main() {
+  ({ runAgent } = await import("../src/lib/agent/stream"));
+  ({ getVenueWithVoice } = await import("../src/lib/venues.server"));
+  ({ CASES } = await import("./cases"));
+
   if (!process.env.ANTHROPIC_API_KEY) {
     console.error(
       RED("error:") +
