@@ -1,7 +1,10 @@
-import type { PriceBreakdown } from "@/lib/pricing/venuePricing";
+import type { PricingResult, ResolvedFeeLine } from "@/lib/pricing/venuePricing";
 
 // Conversation messages as the client tracks them. The API route translates
-// these into the Anthropic Messages format on each request.
+// these into the Anthropic Messages format on each request. The role union
+// is intentionally narrow: system prompts are server-only, and tool-use /
+// tool-result blocks are carried separately on each assistant message rather
+// than as their own roles.
 export type ChatRole = "user" | "assistant";
 
 export interface ChatMessage {
@@ -20,18 +23,47 @@ export interface ToolCallSummary {
   argsSummary: string;
 }
 
+// Wire shape for the live quote panel. Defined here (not re-exported from
+// the pricing module) so the SSE contract is decoupled from the math
+// module's internal return type — refactoring computeBreakdown shouldn't
+// silently change what we put on the wire. Structurally compatible with
+// PriceBreakdown today; the boundary mapping is the explicit checkpoint.
+export interface QuoteBreakdownDto {
+  subtotal: number;
+  deposit: number;
+  depositSemantics: PricingResult["depositSemantics"];
+  feeLines: ResolvedFeeLine[];
+  dueAtBooking: number;
+  estimatedEventTotal: number;
+}
+
+// Anthropic stream stop reasons we forward to the client. Surfacing this on
+// message_end pays back the first time you debug a truncated reply.
+export type ChatStopReason =
+  | "end_turn"
+  | "tool_use"
+  | "max_tokens"
+  | "stop_sequence";
+
 // Streamed SSE event shape. The server emits one of these per chunk; the
 // client appends/updates accordingly.
 export type ChatStreamEvent =
   | { kind: "text_delta"; messageId: string; delta: string }
   | { kind: "message_start"; messageId: string }
-  | { kind: "message_end"; messageId: string }
+  | { kind: "message_end"; messageId: string; stopReason: ChatStopReason }
   | { kind: "tool_use_start"; messageId: string; toolCall: ToolCallSummary }
   | {
       kind: "tool_use_end";
       messageId: string;
       toolCallId: string;
       status: "ok" | "error";
+      errorMessage?: string;
     }
-  | { kind: "quote_update"; breakdown: PriceBreakdown; packageId: string; venueId: string }
+  | {
+      kind: "quote_update";
+      toolCallId: string;
+      breakdown: QuoteBreakdownDto;
+      packageId: string;
+      venueId: string;
+    }
   | { kind: "error"; message: string };
