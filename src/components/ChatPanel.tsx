@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowUp, Square } from "lucide-react";
+import { CornerDownLeft, Square } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
 import { canSubmit, keyIntent, turnStatus } from "./ChatPanel.logic";
 import type { ChatMessage } from "@/types/chat";
@@ -18,14 +18,10 @@ interface ChatPanelProps {
   suggestedPrompts?: string[];
 }
 
-// Pixel cap matches `max-h-32` (8rem). Kept in sync with the textarea class
-// below; the JS clamp is what actually limits height during auto-grow.
 const TEXTAREA_MAX_PX = 128;
-// Distance (px) from the bottom within which we consider the list "pinned".
 const STICK_THRESHOLD_PX = 64;
-// Single source for composer button labels — feeds both aria-label
-// (assistive tech) and title (sighted-mouse hover hint), so copy can't
-// drift between the two.
+// Single source for composer button labels — feeds both aria-label and
+// title so copy can't drift between the two.
 const STOP_LABEL = "Stop generating";
 const SEND_LABEL = "Send message";
 
@@ -41,21 +37,14 @@ export function ChatPanel({
   const [input, setInput] = useState("");
   const listRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  // Only auto-scroll while the user is near the bottom. If they scroll up to
-  // re-read mid-stream, we leave them where they are.
   const stickToBottomRef = useRef(true);
 
-  // useLayoutEffect so the jump happens before paint — avoids a flash where
-  // the new content renders above the fold and then snaps down.
   useLayoutEffect(() => {
     const el = listRef.current;
     if (!el || !stickToBottomRef.current) return;
     el.scrollTop = el.scrollHeight;
   }, [messages]);
 
-  // Auto-grow the composer up to TEXTAREA_MAX_PX. Reset-to-auto first so
-  // shrinking after a delete works; clamp manually instead of relying on CSS
-  // max-height, because we want scrollHeight to reflect the natural size.
   useEffect(() => {
     const ta = textareaRef.current;
     if (!ta) return;
@@ -73,7 +62,6 @@ export function ChatPanel({
   function submit() {
     const trimmed = input.trim();
     if (!trimmed || disabled || isStreaming) return;
-    // Re-stick on send: the user just took an action, they want to see the reply.
     stickToBottomRef.current = true;
     onSubmit(trimmed);
     setInput("");
@@ -99,48 +87,28 @@ export function ChatPanel({
   );
 
   return (
-    <section className="flex h-full min-h-0 flex-col rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+    <section className="flex h-full min-h-0 flex-col">
       <div
         ref={listRef}
         onScroll={handleListScroll}
-        className="flex-1 space-y-4 overflow-y-auto px-5 py-5"
+        className="flex-1 space-y-7 overflow-y-auto pr-2"
       >
         {messages.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-5 px-4 text-center">
-            <p className="max-w-sm text-sm text-zinc-500 dark:text-zinc-400">
-              Say hi to {venueName}. Tell them what kind of event you&apos;re
-              planning.
-            </p>
-            {suggestedPrompts.length > 0 && (
-              <ul className="flex w-full max-w-md flex-col gap-2">
-                {suggestedPrompts.map((p) => (
-                  <li key={p}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        stickToBottomRef.current = true;
-                        onSubmit(p);
-                      }}
-                      disabled={isStreaming || disabled}
-                      className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-left text-sm text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
-                    >
-                      {p}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          <EmptyState
+            venueName={venueName}
+            suggestedPrompts={suggestedPrompts}
+            disabled={isStreaming || disabled}
+            onPick={(p) => {
+              stickToBottomRef.current = true;
+              onSubmit(p);
+            }}
+          />
         ) : (
           messages.map((m, i) => (
             <MessageBubble
               key={m.id}
               message={m}
               venueName={venueName}
-              // Only the most recent assistant turn shows the streaming
-              // ellipsis placeholder. An empty older bubble (rare, but
-              // possible if a turn ended with only tool calls) renders
-              // empty instead of forever-loading.
               isStreamingTurn={isStreaming && i === messages.length - 1}
             />
           ))
@@ -153,27 +121,40 @@ export function ChatPanel({
 
       <form
         onSubmit={handleFormSubmit}
-        className="flex items-end gap-2 border-t border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
+        className="mt-8 flex items-end gap-4 border-t border-rule pt-4"
       >
-        <textarea
-          ref={textareaRef}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          rows={1}
-          placeholder={`Message ${venueName}…`}
-          disabled={disabled}
-          className="min-h-[2.5rem] flex-1 resize-none rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600 dark:focus:ring-zinc-800"
-        />
+        <div className="flex-1">
+          <label
+            htmlFor="composer"
+            className="block font-sans text-[10px] uppercase tracking-[0.28em] text-ink-faint"
+          >
+            Reply
+          </label>
+          <textarea
+            id="composer"
+            ref={textareaRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            rows={1}
+            placeholder={`Write to ${venueName}…`}
+            disabled={disabled}
+            className="mt-1.5 w-full resize-none bg-transparent font-serif text-[15px] leading-[1.55] text-ink placeholder:italic placeholder:text-ink-faint focus:outline-none disabled:opacity-50"
+          />
+        </div>
         {isStreaming && onStop ? (
           <button
             type="button"
             onClick={onStop}
             aria-label={STOP_LABEL}
             title={STOP_LABEL}
-            className="grid size-10 shrink-0 place-items-center rounded-xl bg-zinc-900 text-zinc-50 transition hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            className="group flex shrink-0 items-baseline gap-2 self-end pb-2 font-sans text-[10px] uppercase tracking-[0.28em] text-error transition hover:text-ink"
           >
-            <Square className="size-3.5 fill-current" aria-hidden />
+            <span>Stop</span>
+            <Square
+              className="size-2.5 fill-current transition group-hover:scale-110"
+              aria-hidden
+            />
           </button>
         ) : (
           <button
@@ -181,12 +162,64 @@ export function ChatPanel({
             disabled={!canSend}
             aria-label={SEND_LABEL}
             title={SEND_LABEL}
-            className="grid size-10 shrink-0 place-items-center rounded-xl bg-zinc-900 text-zinc-50 transition disabled:opacity-30 hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            className="group flex shrink-0 items-baseline gap-2 self-end pb-2 font-sans text-[10px] uppercase tracking-[0.28em] text-ink-soft transition hover:text-accent disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:text-ink-soft"
           >
-            <ArrowUp className="size-4" aria-hidden />
+            <span>Send</span>
+            <CornerDownLeft className="size-3.5" aria-hidden />
           </button>
         )}
       </form>
     </section>
+  );
+}
+
+function EmptyState({
+  venueName,
+  suggestedPrompts,
+  disabled,
+  onPick,
+}: {
+  venueName: string;
+  suggestedPrompts: string[];
+  disabled: boolean;
+  onPick: (p: string) => void;
+}) {
+  return (
+    <div className="flex h-full flex-col justify-center">
+      <div className="rise rise-1 font-sans text-[10px] uppercase tracking-[0.28em] text-ink-faint">
+        Opening note
+      </div>
+      <p className="rise rise-2 mt-3 max-w-[38ch] font-display text-3xl italic leading-[1.15] text-ink">
+        Tell {venueName} about your event.
+      </p>
+      <p className="rise rise-3 mt-3 max-w-[44ch] font-serif text-[15px] italic leading-relaxed text-ink-soft">
+        A date, a head count, the kind of evening you&apos;re thinking. The
+        right side composes the bill as we talk.
+      </p>
+      {suggestedPrompts.length > 0 && (
+        <ul className="mt-8 max-w-[42rem] divide-y divide-rule border-y border-rule">
+          {suggestedPrompts.map((p, i) => (
+            <li key={p} className={`rise rise-${Math.min(i + 4, 5)}`}>
+              <button
+                type="button"
+                onClick={() => onPick(p)}
+                disabled={disabled}
+                className="group flex w-full items-baseline gap-3 py-3 text-left transition disabled:opacity-50"
+              >
+                <span
+                  aria-hidden
+                  className="font-mono text-[11px] text-ink-faint transition group-hover:text-accent"
+                >
+                  ▸
+                </span>
+                <span className="font-serif text-[15px] italic leading-snug text-ink-soft transition group-hover:text-ink">
+                  {p}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

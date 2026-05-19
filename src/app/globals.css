@@ -1,34 +1,110 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Editorial hospitality palette — cream paper, espresso ink,
+     vermillion for the number the guest owes today. */
+  --paper: #faf6ee;
+  --paper-deep: #f3ecdb;
+  --ink: #1f1a14;
+  --ink-soft: #6b5f4f;
+  --ink-faint: #a5998a;
+  --rule: #e0d8c4;
+  --rule-strong: #c8bfa9;
+  --accent: #bc4b2c;
+  --accent-soft: rgba(188, 75, 44, 0.08);
+  --error: #a83a2a;
+  --error-soft: #f5e0d8;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --paper: #14100a;
+    --paper-deep: #1b1610;
+    --ink: #f0e7d4;
+    --ink-soft: #b6a98f;
+    --ink-faint: #645b48;
+    --rule: #2b2419;
+    --rule-strong: #3d3424;
+    --accent: #e07550;
+    --accent-soft: rgba(224, 117, 80, 0.12);
+    --error: #e07a64;
+    --error-soft: rgba(224, 122, 100, 0.12);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-deep: var(--paper-deep);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-error: var(--error);
+  --color-error-soft: var(--error-soft);
+  --font-sans: var(--font-fraunces);
+  --font-display: var(--font-fraunces);
+  --font-mono: var(--font-jetbrains);
 }
 
-/* Quote entry animation. Applied to PriceBreakdown each time a new quote
-   lands; QuotePanel keys the component on (packageId, dateISO, guests) so
-   the animation re-fires when the agent re-quotes against new inputs. */
+html {
+  background: var(--paper);
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-fraunces), Georgia, serif;
+  /* Optical-sizing on; Fraunces' opsz axis means smaller sizes use higher
+     contrast and tighter shapes, larger sizes loosen and breathe. */
+  font-optical-sizing: auto;
+  font-feature-settings: "ss01" on, "ss02" on;
+}
+
+/* Paper grain. A 200-byte inline SVG, doubled for retina; layered with
+   mix-blend-mode so it darkens cream and lightens dark mode without
+   needing two assets. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.55;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.13 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+@media (prefers-color-scheme: dark) {
+  body::before {
+    opacity: 0.35;
+    mix-blend-mode: screen;
+  }
+}
+
+/* Quote entry animation. Keys on (packageId, dateISO, guests) at the
+   parent so each new quote re-fires the reveal. Receipt-style: rule
+   draws first, lines settle in from the top edge. */
 @keyframes quote-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    clip-path: inset(0 0 0 0);
+  }
+}
+.quote-enter {
+  animation: quote-enter 340ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* Staggered fade-in for the empty-state copy + chip list. */
+@keyframes rise {
   from {
     opacity: 0;
     transform: translateY(6px);
@@ -38,11 +114,35 @@ body {
     transform: translateY(0);
   }
 }
-.quote-enter {
-  animation: quote-enter 220ms ease-out;
+.rise {
+  animation: rise 400ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
+.rise-1 {
+  animation-delay: 60ms;
+}
+.rise-2 {
+  animation-delay: 140ms;
+}
+.rise-3 {
+  animation-delay: 220ms;
+}
+.rise-4 {
+  animation-delay: 300ms;
+}
+.rise-5 {
+  animation-delay: 380ms;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .quote-enter {
+  .quote-enter,
+  .rise {
     animation: none;
   }
+}
+
+/* Selection styling. Vermillion-on-cream for light, cream-on-espresso
+   for dark; the default browser blue jars against the editorial palette. */
+::selection {
+  background: var(--accent);
+  color: var(--paper);
 }

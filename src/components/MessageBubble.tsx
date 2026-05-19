@@ -6,16 +6,16 @@ import type { ChatMessage } from "@/types/chat";
 
 interface MessageBubbleProps {
   message: ChatMessage;
-  // Display name shown above the assistant's bubble. The venue is the
-  // identity speaking, not a generic "assistant", so the parent threads
-  // the active venue's name through here.
   venueName: string;
-  // True only for the active streaming assistant turn. Gates the empty-
-  // bubble "…" placeholder so older bubbles that ended with only tool
-  // calls render as empty, not as forever-loading.
+  // True only for the active streaming assistant turn. Gates the
+  // ellipsis placeholder so older empty bubbles don't read as loading.
   isStreamingTurn?: boolean;
 }
 
+// Correspondence treatment: no bubble fills. Each message reads like a
+// line of dialogue in a play — italic display-serif speaker label,
+// then the text in serif body. Customer turns are right-aligned so the
+// rhythm reads as a back-and-forth without losing legibility.
 export function MessageBubble({
   message,
   venueName,
@@ -23,41 +23,56 @@ export function MessageBubble({
 }: MessageBubbleProps) {
   const isVenue = message.role === "assistant";
   const toolCalls = message.toolCalls ?? [];
+  const speaker = isVenue ? venueName : "You";
   const showPlaceholder = isVenue && !message.text && isStreamingTurn;
 
   return (
-    <div
+    <article
       className={cn(
         "flex flex-col gap-1.5",
-        isVenue ? "items-start" : "items-end",
+        isVenue ? "items-start text-left" : "items-end text-right",
       )}
     >
-      {isVenue && (
-        <div className="px-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
-          {venueName}
-        </div>
-      )}
+      <div
+        className={cn(
+          "font-display text-[11px] uppercase tracking-[0.24em] text-ink-faint",
+        )}
+      >
+        <span className="italic">{speaker}</span>
+      </div>
       {(message.text || showPlaceholder) && (
-        <div
-          className={cn(
-            "max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
-            isVenue
-              ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50"
-              : "bg-zinc-900 text-zinc-50 dark:bg-zinc-50 dark:text-zinc-900",
-          )}
-        >
+        <div className="max-w-[36rem] font-serif text-[15px] leading-[1.55] text-ink">
           {message.text || (
-            <span className="text-zinc-400 dark:text-zinc-500">…</span>
+            <span className="font-sans text-ink-faint">
+              <span className="inline-block animate-pulse">·</span>
+              <span
+                className="inline-block animate-pulse"
+                style={{ animationDelay: "120ms" }}
+              >
+                ·
+              </span>
+              <span
+                className="inline-block animate-pulse"
+                style={{ animationDelay: "240ms" }}
+              >
+                ·
+              </span>
+            </span>
           )}
         </div>
       )}
       {toolCalls.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 px-1">
+        <div
+          className={cn(
+            "flex flex-wrap gap-1.5",
+            isVenue ? "justify-start" : "justify-end",
+          )}
+        >
           {toolCalls.map((tc) => (
             <ToolCallPill key={tc.id} toolCall={tc} />
           ))}
         </div>
       )}
-    </div>
+    </article>
   );
 }

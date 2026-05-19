@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, X } from "lucide-react";
 import { ChatPanel } from "@/components/ChatPanel";
 import { QuotePanel } from "@/components/QuotePanel";
 import { useChatStream } from "@/lib/useChatStream";
@@ -17,41 +16,53 @@ export default function Home() {
     useChatStream(venueId);
 
   return (
-    <div className="flex flex-1 flex-col font-sans">
-      <header className="border-b border-zinc-200 bg-white/80 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/80">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="size-7 rounded-lg bg-zinc-900 dark:bg-zinc-50" />
-            <div>
-              <h1 className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-                Concierge
-              </h1>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                AI quoting assistant
-              </p>
-            </div>
+    <div className="flex flex-1 flex-col">
+      <header className="border-b border-rule">
+        <div className="mx-auto flex w-full max-w-6xl items-baseline justify-between px-8 py-6">
+          <div className="flex items-baseline gap-4">
+            {/* Wordmark. Display-serif italic with a fine ornament,
+                no boxy logo — the type IS the mark. */}
+            <span className="font-display text-2xl font-medium italic leading-none tracking-tight text-ink">
+              Concierge
+            </span>
+            <span aria-hidden className="text-rule-strong">
+              ·
+            </span>
+            <span className="font-sans text-[11px] uppercase tracking-[0.22em] text-ink-soft">
+              A private dining guide
+            </span>
           </div>
+          <a
+            href="https://github.com/benjaminematton/venue-concierge"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-sans text-[11px] uppercase tracking-[0.22em] text-ink-soft transition hover:text-accent"
+          >
+            View source
+          </a>
         </div>
       </header>
 
       {error && (
-        <div className="border-b border-red-200 bg-red-50 px-6 py-2.5 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
-          <div className="mx-auto flex w-full max-w-6xl items-center gap-2">
-            <AlertTriangle className="size-4 shrink-0" aria-hidden />
-            <span className="flex-1">{error}</span>
+        <div className="border-b border-error/40 bg-error-soft px-8 py-3 text-sm">
+          <div className="mx-auto flex w-full max-w-6xl items-center gap-3 text-error">
+            <span aria-hidden className="font-mono text-[10px] uppercase">
+              ✕
+            </span>
+            <span className="flex-1 italic">{error}</span>
             <button
               type="button"
               onClick={clearError}
               aria-label="Dismiss error"
-              className="grid size-6 shrink-0 place-items-center rounded-md text-red-700 transition hover:bg-red-100 dark:text-red-300 dark:hover:bg-red-900/40"
+              className="font-sans text-[10px] uppercase tracking-[0.22em] text-error transition hover:text-ink"
             >
-              <X className="size-3.5" aria-hidden />
+              dismiss
             </button>
           </div>
         </div>
       )}
 
-      <main className="mx-auto grid w-full max-w-6xl flex-1 grid-cols-1 gap-6 px-6 py-6 md:grid-cols-[1fr_24rem]">
+      <main className="mx-auto grid w-full max-w-6xl flex-1 grid-cols-1 gap-10 px-8 py-10 md:grid-cols-[1fr_20rem]">
         <ChatPanel
           messages={messages}
           venueName={venue.name}
@@ -72,6 +83,15 @@ export default function Home() {
           />
         </aside>
       </main>
+
+      <footer className="border-t border-rule">
+        <div className="mx-auto flex w-full max-w-6xl items-baseline justify-between px-8 py-5 font-sans text-[11px] uppercase tracking-[0.22em] text-ink-faint">
+          <span>Extracted from VaBene · An event-planning marketplace</span>
+          <span className="font-mono normal-case tracking-normal text-ink-faint">
+            v0.1
+          </span>
+        </div>
+      </footer>
     </div>
   );
 }

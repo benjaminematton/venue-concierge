@@ -1,6 +1,5 @@
 "use client";
 
-import { Calculator } from "lucide-react";
 import { PriceBreakdown } from "./PriceBreakdown";
 import { VenueSwitcher } from "./VenueSwitcher";
 import type { PriceBreakdown as PriceBreakdownData } from "@/lib/pricing/venuePricing";
@@ -31,7 +30,7 @@ export function QuotePanel({
   const ready = breakdown && pkg && date && guests !== null;
 
   return (
-    <div className="flex h-full flex-col gap-4">
+    <div className="flex h-full flex-col gap-8">
       <VenueSwitcher
         venues={venues}
         selectedId={venue.id}
@@ -40,9 +39,6 @@ export function QuotePanel({
 
       {ready ? (
         <PriceBreakdown
-          // Key so the entry animation re-fires when the agent re-quotes
-          // against new inputs (the same component instance otherwise
-          // updates in place and the animation only runs on mount).
           key={`${pkg.id}-${date}-${guests}`}
           breakdown={breakdown}
           packageLabel={pkg.label}
@@ -59,17 +55,32 @@ export function QuotePanel({
 
 function QuoteSkeleton({ venueName }: { venueName: string }) {
   return (
-    <div className="rounded-2xl border border-dashed border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
-      <div className="flex items-center gap-3 text-zinc-500 dark:text-zinc-400">
-        <Calculator className="size-5" aria-hidden />
-        <div className="text-sm font-medium">
-          Quote will appear here as we talk
-        </div>
+    <div className="border-y border-rule-strong py-6 text-ink">
+      <div className="font-sans text-[10px] uppercase tracking-[0.28em] text-ink-faint">
+        Estimated quote
       </div>
-      <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-500">
+      <h2 className="mt-1 font-display text-xl italic leading-tight tracking-tight text-ink-soft">
+        Pending
+      </h2>
+      <p className="mt-3 max-w-[24ch] font-sans text-[12px] italic leading-relaxed text-ink-soft">
         Tell {venueName} about your event in the chat. Once we have the date,
-        guest count, and a package, the breakdown shows up here.
+        guest count, and a package, the figure assembles here.
       </p>
+      <div className="my-5 h-px bg-rule" aria-hidden />
+      <dl className="space-y-1.5 font-mono text-[12px] tabular-nums text-ink-faint">
+        <Placeholder label="Subtotal" />
+        <Placeholder label="Due at booking" />
+        <Placeholder label="Estimated total" />
+      </dl>
+    </div>
+  );
+}
+
+function Placeholder({ label }: { label: string }) {
+  return (
+    <div className="flex items-baseline justify-between">
+      <dt className="font-sans">{label}</dt>
+      <dd className="text-ink-faint">—</dd>
     </div>
   );
 }

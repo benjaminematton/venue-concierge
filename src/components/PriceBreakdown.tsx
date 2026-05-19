@@ -9,7 +9,6 @@ interface PriceBreakdownProps {
   breakdown: PriceBreakdownData;
   packageLabel: string;
   venueName: string;
-  // ISO date (YYYY-MM-DD) in the venue's local calendar.
   date: string;
   guests: number;
 }
@@ -20,10 +19,12 @@ function feeLabel(line: ResolvedFeeLine): string {
   return `${line.label} (${formatRatePct(line.rate)})`;
 }
 
-const DATE_FORMAT = new Intl.DateTimeFormat("en-US", { dateStyle: "medium" });
+const DATE_FORMAT = new Intl.DateTimeFormat("en-US", {
+  month: "long",
+  day: "numeric",
+  year: "numeric",
+});
 
-// Parse YYYY-MM-DD as a local calendar date — `new Date("2026-06-15")` is
-// UTC midnight, which would shift a day in negative-offset zones.
 function formatLocalDate(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
   return DATE_FORMAT.format(new Date(y, m - 1, d));
@@ -33,6 +34,8 @@ function feeKey(line: ResolvedFeeLine, i: number): string {
   return `${line.appliesAt}-${i}-${line.label}`;
 }
 
+// Receipt slip aesthetic — hairline rules, serif headlines, mono numerals,
+// vermillion accent reserved for the number the customer commits to today.
 export function PriceBreakdown({
   breakdown,
   packageLabel,
@@ -47,100 +50,139 @@ export function PriceBreakdown({
   const isFbMinimum = breakdown.depositSemantics === "AppliedToTab";
 
   return (
-    <div className="quote-enter rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-      <header className="flex items-baseline justify-between gap-4">
-        <div>
-          <div className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-            Estimated quote
-          </div>
-          <h2 className="mt-1 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-            {packageLabel}
-          </h2>
+    <div className="border-y border-rule-strong py-6 text-ink">
+      <header className="mb-5">
+        <div className="font-sans text-[10px] uppercase tracking-[0.28em] text-ink-faint">
+          Estimated quote
         </div>
-        <div className="text-right text-xs text-zinc-500 dark:text-zinc-400">
-          <div className="font-medium text-zinc-700 dark:text-zinc-300">
-            {venueName}
-          </div>
-          <div className="mt-0.5 tabular-nums">
-            {formatLocalDate(date)} · {guests} {guests === 1 ? "guest" : "guests"}
-          </div>
+        <h2 className="mt-1 font-display text-xl italic leading-tight tracking-tight text-ink">
+          {packageLabel}
+        </h2>
+        <div className="mt-1.5 font-sans text-[11px] uppercase tracking-[0.18em] text-ink-soft">
+          <span>{venueName}</span>
+          <span aria-hidden className="mx-2 text-ink-faint">
+            ·
+          </span>
+          <span className="font-mono normal-case tracking-normal text-ink-soft">
+            {formatLocalDate(date)}
+          </span>
+          <span aria-hidden className="mx-2 text-ink-faint">
+            ·
+          </span>
+          <span className="font-mono normal-case tracking-normal text-ink-soft">
+            {guests} {guests === 1 ? "guest" : "guests"}
+          </span>
         </div>
       </header>
 
-      <dl className="mt-5 space-y-2 text-sm">
-        <div className="flex items-baseline justify-between">
-          <dt className="text-zinc-700 dark:text-zinc-300">
-            {isFbMinimum ? "Food & beverage minimum" : "Package fee"}
-          </dt>
-          <dd className="font-mono tabular-nums text-zinc-900 dark:text-zinc-50">
-            {usd(breakdown.subtotal)}
-          </dd>
-        </div>
-
+      <dl className="space-y-1.5 text-[13px]">
+        <Row
+          label={isFbMinimum ? "Food & beverage minimum" : "Package fee"}
+          value={usd(breakdown.subtotal)}
+          strong
+        />
         {bookingFees.map((line, i) => (
-          <div key={feeKey(line, i)} className="flex items-baseline justify-between">
-            <dt className="text-zinc-600 dark:text-zinc-400">{feeLabel(line)}</dt>
-            <dd className="font-mono tabular-nums text-zinc-700 dark:text-zinc-300">
-              {usd(line.amount)}
-            </dd>
-          </div>
+          <Row
+            key={feeKey(line, i)}
+            label={feeLabel(line)}
+            value={usd(line.amount)}
+            faint
+          />
         ))}
-
-        <div className="my-3 h-px bg-zinc-200 dark:bg-zinc-800" />
-
-        <div className="flex items-baseline justify-between">
-          <dt className="font-semibold text-zinc-900 dark:text-zinc-50">
-            Due at booking
-          </dt>
-          <dd className="font-mono text-base font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
-            {usd(breakdown.dueAtBooking)}
-          </dd>
-        </div>
-        {isFbMinimum && (
-          <p className="text-xs text-zinc-500 dark:text-zinc-500">
-            Reservation deposit of {usd(breakdown.deposit)} is credited to your tab
-            at the venue.
-          </p>
-        )}
-
-        {reconcileFees.length > 0 && (
-          <>
-            <div className="my-3 h-px bg-zinc-200 dark:bg-zinc-800" />
-            <div className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-              At the event
-            </div>
-            {reconcileFees.map((line, i) => (
-              <div
-                key={feeKey(line, i)}
-                className="flex items-baseline justify-between"
-              >
-                <dt className="text-zinc-600 dark:text-zinc-400">
-                  {feeLabel(line)}
-                </dt>
-                <dd className="font-mono tabular-nums text-zinc-700 dark:text-zinc-300">
-                  {usd(line.amount)}
-                </dd>
-              </div>
-            ))}
-          </>
-        )}
-
-        <div className="my-3 h-px bg-zinc-200 dark:bg-zinc-800" />
-
-        <div className="flex items-baseline justify-between">
-          <dt className="font-semibold text-zinc-900 dark:text-zinc-50">
-            Estimated event total
-          </dt>
-          <dd className="font-mono text-base font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
-            {usd(breakdown.estimatedEventTotal)}
-          </dd>
-        </div>
       </dl>
 
-      <p className="mt-4 text-xs text-zinc-500 dark:text-zinc-500">
+      <Divider />
+
+      {/* Due-at-booking is the only number set in vermillion. The whole
+          design's accent budget lives here — every other figure stays ink. */}
+      <div className="flex items-baseline justify-between">
+        <dt className="font-display text-[15px] italic text-ink">
+          Due at booking
+        </dt>
+        <dd className="font-mono text-lg font-medium tabular-nums text-accent">
+          {usd(breakdown.dueAtBooking)}
+        </dd>
+      </div>
+      {isFbMinimum && (
+        <p className="mt-2 max-w-prose font-sans text-[11px] italic leading-snug text-ink-soft">
+          Reservation deposit of {usd(breakdown.deposit)} is credited to your
+          tab at the venue.
+        </p>
+      )}
+
+      {reconcileFees.length > 0 && (
+        <>
+          <Divider />
+          <div className="mb-2 font-sans text-[10px] uppercase tracking-[0.28em] text-ink-faint">
+            At the event
+          </div>
+          <dl className="space-y-1.5 text-[13px]">
+            {reconcileFees.map((line, i) => (
+              <Row
+                key={feeKey(line, i)}
+                label={feeLabel(line)}
+                value={usd(line.amount)}
+                faint
+              />
+            ))}
+          </dl>
+        </>
+      )}
+
+      <Divider />
+
+      <div className="flex items-baseline justify-between">
+        <dt className="font-display text-[15px] italic text-ink">
+          Estimated event total
+        </dt>
+        <dd className="font-mono text-lg font-medium tabular-nums text-ink">
+          {usd(breakdown.estimatedEventTotal)}
+        </dd>
+      </div>
+
+      <p className="mt-5 font-sans text-[11px] italic leading-snug text-ink-faint">
         Estimate based on current selection. Final total may shift with actual
         spend and guest count.
       </p>
     </div>
   );
+}
+
+function Row({
+  label,
+  value,
+  strong = false,
+  faint = false,
+}: {
+  label: string;
+  value: string;
+  strong?: boolean;
+  faint?: boolean;
+}) {
+  return (
+    <div className="flex items-baseline justify-between">
+      <dt
+        className={
+          faint
+            ? "font-sans text-ink-soft"
+            : strong
+              ? "font-display text-[15px] italic text-ink"
+              : "font-sans text-ink"
+        }
+      >
+        {label}
+      </dt>
+      <dd
+        className={`font-mono tabular-nums ${
+          faint ? "text-ink-soft" : strong ? "text-base font-medium text-ink" : "text-ink"
+        }`}
+      >
+        {value}
+      </dd>
+    </div>
+  );
+}
+
+function Divider() {
+  return <div className="my-4 h-px bg-rule" aria-hidden />;
 }

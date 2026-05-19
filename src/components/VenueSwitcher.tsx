@@ -9,6 +9,10 @@ interface VenueSwitcherProps {
   onChange: (id: string) => void;
 }
 
+// Editorial selector: no chunky dropdown chrome. A tracked-out "SPEAKING
+// WITH" label sits above a large italic display-serif venue name; the
+// native <select> overlays everything and is fully transparent. Click
+// the name and the OS picker opens.
 export function VenueSwitcher({
   venues,
   selectedId,
@@ -16,27 +20,33 @@ export function VenueSwitcher({
 }: VenueSwitcherProps) {
   const selected = venues.find((v) => v.id === selectedId);
   return (
-    <div>
-      <label className="group relative block">
-        <span className="sr-only">Switch venue</span>
+    <div className="relative">
+      <div className="font-sans text-[10px] uppercase tracking-[0.28em] text-ink-faint">
+        Speaking with
+      </div>
+      <div className="relative mt-2 flex items-end gap-2 border-b border-rule pb-2">
+        <span className="font-display text-[26px] font-medium italic leading-[1.05] tracking-tight text-ink">
+          {selected?.name ?? "Select venue"}
+        </span>
+        <ChevronDown
+          aria-hidden
+          className="mb-1 size-4 shrink-0 text-ink-faint transition group-focus-within:text-accent"
+        />
         <select
           value={selectedId}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full appearance-none rounded-xl border border-zinc-200 bg-white py-2.5 pl-4 pr-10 text-left text-sm font-medium text-zinc-900 shadow-sm transition focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:focus:border-zinc-600 dark:focus:ring-zinc-800"
+          aria-label="Switch venue"
+          className="absolute inset-0 cursor-pointer appearance-none bg-transparent text-transparent opacity-0 focus:outline-none"
         >
           {venues.map((v) => (
             <option key={v.id} value={v.id}>
-              {v.name} · {v.neighborhood}
+              {v.name} — {v.neighborhood}
             </option>
           ))}
         </select>
-        <ChevronDown
-          aria-hidden
-          className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500 transition group-focus-within:text-zinc-900 dark:text-zinc-400 dark:group-focus-within:text-zinc-100"
-        />
-      </label>
+      </div>
       {selected && (
-        <p className="mt-1.5 px-1 text-xs text-zinc-500 dark:text-zinc-400">
+        <p className="mt-2 font-sans text-xs italic text-ink-soft">
           {selected.tagline}
         </p>
       )}
