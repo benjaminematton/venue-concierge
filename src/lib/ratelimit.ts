@@ -42,8 +42,12 @@ export async function checkRateLimit(
 }
 
 export function getClientIp(req: Request): string {
-  // Vercel / Cloudflare / most proxies set x-forwarded-for with the
-  // original client first, comma-separated. Trust the first hop.
+  // Assumes a trusted proxy (Vercel, Cloudflare) rewriting x-forwarded-for
+  // with the real client IP first. Off those platforms the header is
+  // client-controlled and a caller can rotate buckets by spoofing it — so
+  // either deploy behind a trusted edge or replace this with a header your
+  // proxy guarantees. The "anonymous" fallback collapses all unknown
+  // clients into one bucket, which is intentionally restrictive.
   const xff = req.headers.get("x-forwarded-for");
   if (xff) {
     const first = xff.split(",")[0]?.trim();
