@@ -65,5 +65,9 @@ export type ChatStreamEvent =
       breakdown: QuoteBreakdownDto;
       packageId: string;
       venueId: string;
+      // Inputs the agent quoted against, echoed so the panel can show
+      // "Jun 15 · 25 guests" without re-parsing the chat history.
+      dateISO: string;
+      guests: number;
     }
   | { kind: "error"; message: string };

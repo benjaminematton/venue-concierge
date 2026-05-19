@@ -119,11 +119,17 @@ export async function* runAgent(args: RunArgs): AsyncGenerator<ChatStreamEvent> 
           packageId: string;
           spaceId: string | null;
         };
+        const input = block.input as {
+          dateISO?: string;
+          guests?: number;
+        };
         yield {
           kind: "quote_update",
           toolCallId: block.id,
           venueId: venue.id,
           packageId: data.packageId,
+          dateISO: input.dateISO ?? "",
+          guests: input.guests ?? 0,
           breakdown: {
             subtotal: data.subtotal,
             deposit: data.deposit,
